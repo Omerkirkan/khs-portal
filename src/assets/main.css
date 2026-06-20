@@ -1,0 +1,118 @@
+@import 'tailwindcss';
+
+/*
+  KHS — Hackerspace Portal teması (light + dark).
+  Sınıf-tabanlı dark mode: <html class="dark"> / <html class="light">.
+*/
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /*
+    Semantik renkler — gerçek değerler aşağıda :root (light) / .dark altında.
+    Bileşenler sabit zinc-* yerine bu token'ları kullanır:
+    bg-base, bg-surface, bg-sidebar, bg-input, text-content, text-muted,
+    text-faint, border-line / divide-line.
+  */
+  --color-base: var(--c-base);
+  --color-surface: var(--c-surface);
+  --color-sidebar: var(--c-sidebar);
+  --color-input: var(--c-input);
+  --color-line: var(--c-line);
+  --color-content: var(--c-content);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+
+  /* Accent — kurumsal indigo (birincil aksiyon / aktif durum / link) */
+  --color-accent: var(--c-accent);
+  --color-accent-dim: var(--c-accent-dim);
+  --color-accent-bright: var(--c-accent-bright);
+  --color-accent-fg: var(--c-accent-fg); /* accent zemin üstündeki metin */
+
+  /* Durum renkleri — yalnızca anlam taşıyan yerlerde (rozet, uyarı) */
+  --color-success: var(--c-success);
+  --color-danger: var(--c-danger);
+  --color-warning: var(--c-warning);
+
+  /* Tipografi */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Yumuşak, katmanlı gölgeler (gölge yerine ince derinlik) */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-pop: 0 10px 30px -12px rgb(0 0 0 / 0.25), 0 4px 8px -4px rgb(0 0 0 / 0.12);
+}
+
+/*
+  Marka paleti — Konya Hackerspace (konyahackerspace.org):
+  arka plan #1a170f, metin #eceae5, vurgu (altın) #eec35e.
+  Koyu tema markayla birebir; açık tema uyumlu sıcak krem varyant.
+*/
+
+/* Açık tema — sıcak krem zemin, okunur koyu metin */
+:root {
+  --c-base: #faf8f2; /* sıcak krem */
+  --c-surface: #ffffff;
+  --c-sidebar: #ffffff;
+  --c-input: #ffffff;
+  --c-line: #e9e3d6; /* sıcak ince çizgi */
+  --c-content: #1a170f; /* marka koyu — birincil metin */
+  --c-muted: #5b5341; /* sıcak ikincil metin */
+  --c-faint: #847b67; /* soluk ama okunur */
+  /* Accent: koyu altın (beyaz üstünde okunur ~5:1) */
+  --c-accent: #a16207; /* dark goldenrod */
+  --c-accent-dim: #854d04; /* hover */
+  --c-accent-bright: #b8860b;
+  --c-accent-fg: #ffffff; /* koyu altın buton üstü metin */
+  --c-success: #15803d; /* green-700 */
+  --c-danger: #dc2626; /* red-600 */
+  --c-warning: #b45309; /* amber-700 */
+  color-scheme: light;
+}
+
+/* Koyu tema — marka rengi (varsayılan) */
+.dark {
+  --c-base: #1a170f; /* marka arka plan */
+  --c-surface: #221e15; /* hafif kalkık sıcak yüzey */
+  --c-sidebar: #14110a;
+  --c-input: #14110a;
+  --c-line: #332c20; /* sıcak ince çizgi */
+  --c-content: #eceae5; /* marka metin */
+  --c-muted: #aaa291; /* sıcak ikincil metin */
+  --c-faint: #7d7563; /* soluk ama okunur */
+  /* Accent: marka altını (koyu zeminde parlak) */
+  --c-accent: #eec35e; /* marka vurgu */
+  --c-accent-dim: #e0b347; /* hover */
+  --c-accent-bright: #f5d489;
+  --c-accent-fg: #1a170f; /* altın buton üstü koyu metin */
+  --c-success: #22c55e; /* green-500 */
+  --c-danger: #f87171; /* red-400 */
+  --c-warning: #fbbf24; /* amber-400 */
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-base text-content font-sans antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+/* Erişilebilir, accent renkli ince focus halkası */
+:focus-visible {
+  @apply outline-none ring-2 ring-accent/55 ring-offset-2 ring-offset-base;
+}
+
+/* İnce, temaya duyarlı kaydırma çubuğu */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 9999px;
+  border: 2px solid var(--color-base);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-faint);
+}
