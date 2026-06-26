@@ -1,4 +1,4 @@
-import type { AppRole, Profile, UserRole } from '@/types'
+import type { AppRole, Member, MemberStatus, Profile, Transaction, TxnKind, UserRole } from '@/types'
 
 /**
  * Supabase şemasının TypeScript tip tanımı.
@@ -45,6 +45,69 @@ export interface Database {
         }
         Relationships: []
       }
+      members: {
+        Row: Member
+        // name_key DB tarafında üretilir (generated); Insert/Update'te yer almaz.
+        Insert: {
+          id?: string
+          full_name: string
+          email?: string | null
+          phone?: string | null
+          status?: MemberStatus
+          user_id?: string | null
+          monthly_due?: number
+          joined_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          phone?: string | null
+          status?: MemberStatus
+          user_id?: string | null
+          monthly_due?: number
+          joined_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: Transaction
+        Insert: {
+          id?: string
+          txn_date: string
+          channel?: string | null
+          receipt_no?: string | null
+          description: string
+          amount: number
+          kind?: TxnKind
+          counterparty_name?: string | null
+          counterparty_sn?: string | null
+          ref_no?: string | null
+          period?: string | null
+          member_id?: string | null
+          applied?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          txn_date?: string
+          channel?: string | null
+          receipt_no?: string | null
+          description?: string
+          amount?: number
+          kind?: TxnKind
+          counterparty_name?: string | null
+          counterparty_sn?: string | null
+          ref_no?: string | null
+          period?: string | null
+          member_id?: string | null
+          applied?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: { [_ in never]: never }
     Functions: {
@@ -79,12 +142,23 @@ export interface Database {
         }
         Returns: string
       }
+      member_set_login: {
+        Args: {
+          p_member_id: string
+          p_email: string
+          p_password: string
+          p_role?: AppRole
+        }
+        Returns: string
+      }
       current_user_role: { Args: Record<string, never>; Returns: AppRole }
       is_admin: { Args: Record<string, never>; Returns: boolean }
       is_superadmin: { Args: Record<string, never>; Returns: boolean }
     }
     Enums: {
       app_role: AppRole
+      member_status: MemberStatus
+      txn_kind: TxnKind
     }
     CompositeTypes: { [_ in never]: never }
   }

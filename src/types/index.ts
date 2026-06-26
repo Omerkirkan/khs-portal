@@ -3,31 +3,76 @@
  * Supabase tablolarıyla hizalı; Aşama B'de composable'lar bunları kullanır.
  */
 
+/** public.member_status enum'u ile birebir. */
 export type MemberStatus = 'active' | 'inactive' | 'overdue'
 
-export interface Member {
+export const MEMBER_STATUS_LABELS: Record<MemberStatus, string> = {
+  active: 'Aktif',
+  inactive: 'Pasif',
+  overdue: 'Borçlu',
+}
+
+/**
+ * public.members satırı. Üye login ZORUNLU DEĞİL: `user_id` null ise üye giriş
+ * yapamaz; `member_set_login` ile sonradan bir auth hesabına bağlanabilir.
+ * Not: Supabase `Database` jeneriği gereği `interface` değil `type` (bkz. Profile).
+ */
+export type Member = {
   id: string
-  /** İnsan-okur üye numarası, örn. KHS-0042 */
-  member_no: string
   full_name: string
-  email: string
+  name_key: string
+  email: string | null
   phone: string | null
   status: MemberStatus
+  user_id: string | null
+  monthly_due: number
   joined_at: string
   created_at: string
 }
 
-export type DueStatus = 'paid' | 'pending' | 'overdue'
+/** public.txn_kind enum'u ile birebir. */
+export type TxnKind = 'aidat' | 'bagis' | 'diger'
 
-export interface Due {
+export const TXN_KIND_LABELS: Record<TxnKind, string> = {
+  aidat: 'Aidat',
+  bagis: 'Bağış',
+  diger: 'Diğer',
+}
+
+/** public.transactions satırı. (Yukarıdaki nedenle `type`.) */
+export type Transaction = {
   id: string
-  member_id: string
-  /** Aidat dönemi, örn. 2026-06 */
-  period: string
+  txn_date: string
+  channel: string | null
+  receipt_no: string | null
+  description: string
   amount: number
-  currency: string
-  status: DueStatus
-  paid_at: string | null
+  kind: TxnKind
+  counterparty_name: string | null
+  counterparty_sn: string | null
+  ref_no: string | null
+  period: string | null
+  member_id: string | null
+  applied: boolean
+  created_at: string
+}
+
+/**
+ * Üyeler listesi görünüm modeli: members satırı + (varsa) login rolü.
+ * `role` null ise üyenin giriş hesabı yoktur.
+ */
+export interface MemberRow {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  status: MemberStatus
+  user_id: string | null
+  role: AppRole | null
+  /** Aylık aidat tutarı (TL). */
+  monthly_due: number
+  /** Üyelik başlangıcı (YYYY-MM-DD) — borç bu aydan itibaren hesaplanır. */
+  joined_at: string
   created_at: string
 }
 
@@ -63,28 +108,3 @@ export type UserRole = {
   created_at: string
 }
 
-/** profiles + user_roles birleşik görünümü (kullanıcı listesi için). */
-export interface ManagedUser {
-  id: string
-  email: string | null
-  full_name: string | null
-  role: AppRole
-  created_at: string
-}
-
-/** admin_create_user RPC girdisi. */
-export interface CreateUserPayload {
-  email: string
-  password: string
-  role: AppRole
-  full_name: string
-}
-
-/** admin_update_user RPC girdisi. `password` boş bırakılırsa şifre değişmez. */
-export interface UpdateUserPayload {
-  id: string
-  email: string
-  full_name: string
-  role: AppRole
-  password?: string
-}

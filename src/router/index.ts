@@ -34,7 +34,19 @@ const router = createRouter({
           path: 'dues',
           name: 'dues',
           component: () => import('@/views/DuesView.vue'),
-          meta: { allowedRoles: ['superadmin', 'admin', 'keyholder'] },
+          meta: { allowedRoles: ['superadmin', 'admin'] },
+        },
+        {
+          path: 'donations',
+          name: 'donations',
+          component: () => import('@/views/DonationsView.vue'),
+          meta: { allowedRoles: ['superadmin', 'admin'] },
+        },
+        {
+          path: 'import',
+          name: 'import',
+          component: () => import('@/views/ImportView.vue'),
+          meta: { allowedRoles: ['superadmin', 'admin'] },
         },
         {
           path: 'settings',

@@ -5,6 +5,8 @@ import {
   LayoutDashboard,
   Users,
   CreditCard,
+  Gift,
+  Upload,
   Settings,
   LogOut,
   Menu,
@@ -33,7 +35,9 @@ interface NavItem {
 const nav: NavItem[] = [
   { name: 'dashboard', label: 'Genel Bakış', icon: LayoutDashboard, section: 'Yönetim' },
   { name: 'members', label: 'Üyeler', icon: Users, section: 'Yönetim', allowedRoles: ['superadmin', 'admin', 'keyholder'] },
-  { name: 'dues', label: 'Aidatlar', icon: CreditCard, section: 'Yönetim', allowedRoles: ['superadmin', 'admin', 'keyholder'] },
+  { name: 'dues', label: 'Aidatlar', icon: CreditCard, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
+  { name: 'donations', label: 'Bağışlar', icon: Gift, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
+  { name: 'import', label: 'İçe Aktar', icon: Upload, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
   { name: 'settings', label: 'Ayarlar', icon: Settings, section: 'Hesap' },
 ]
 

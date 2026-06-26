@@ -10,23 +10,29 @@ import {
   Search,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { useUserManagement } from '@/composables/useUserManagement'
+import { useMembers } from '@/composables/useMembers'
 import MemberFormModal, { type MemberFormValues } from '@/components/domain/MemberFormModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
-import { ROLE_LABELS, type AppRole, type ManagedUser } from '@/types'
+import {
+  ROLE_LABELS,
+  MEMBER_STATUS_LABELS,
+  type AppRole,
+  type MemberRow,
+  type MemberStatus,
+} from '@/types'
 
 const auth = useAuthStore()
 const {
-  users,
+  members,
   loading,
   submitting,
   deleting,
   error,
-  listUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-} = useUserManagement()
+  listMembers,
+  createMember,
+  updateMember,
+  deleteMember,
+} = useMembers()
 
 const roleBadgeClass: Record<AppRole, string> = {
   superadmin: 'bg-accent/10 text-accent ring-accent/20',
@@ -35,36 +41,42 @@ const roleBadgeClass: Record<AppRole, string> = {
   member: 'bg-zinc-500/10 text-muted ring-zinc-500/20',
 }
 
+const statusBadgeClass: Record<MemberStatus, string> = {
+  active: 'bg-emerald-500/10 text-emerald-600 ring-emerald-500/20 dark:text-emerald-400',
+  inactive: 'bg-zinc-500/10 text-muted ring-zinc-500/20',
+  overdue: 'bg-amber-500/10 text-amber-600 ring-amber-500/20 dark:text-amber-400',
+}
+
 /** Avatar için ad/e-postadan baş harf üretir. */
-function initialOf(u: ManagedUser): string {
-  return (u.full_name ?? u.email ?? '?').trim().charAt(0).toUpperCase()
+function initialOf(m: MemberRow): string {
+  return (m.full_name || m.email || '?').trim().charAt(0).toUpperCase()
 }
 
 // --- Arama / filtre -------------------------------------------------------
 const search = ref('')
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return users.value
-  return users.value.filter(
-    (u) =>
-      (u.full_name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q),
+  if (!q) return members.value
+  return members.value.filter(
+    (m) =>
+      m.full_name.toLowerCase().includes(q) || (m.email ?? '').toLowerCase().includes(q),
   )
 })
 
 // --- Yetki yardımcıları ---------------------------------------------------
 const canCreate = computed(() => auth.isAdmin)
-const isSelf = (u: ManagedUser): boolean => u.id === auth.user?.id
-/** superadmin herkesi; admin yalnızca member/keyholder kullanıcıları yönetebilir. */
-function canManage(u: ManagedUser): boolean {
+const isSelf = (m: MemberRow): boolean => !!m.user_id && m.user_id === auth.user?.id
+/** superadmin herkesi; admin yalnızca admin/superadmin OLMAYAN üyeleri yönetebilir. */
+function canManage(m: MemberRow): boolean {
   if (auth.isSuperadmin) return true
   if (!auth.isAdmin) return false
-  return u.role === 'member' || u.role === 'keyholder'
+  return m.role !== 'admin' && m.role !== 'superadmin'
 }
 
 // --- Oluştur / düzenle modali --------------------------------------------
 const formOpen = ref(false)
 const formMode = ref<'create' | 'edit'>('create')
-const editing = ref<ManagedUser | null>(null)
+const editing = ref<MemberRow | null>(null)
 
 function openCreate(): void {
   error.value = null
@@ -72,10 +84,10 @@ function openCreate(): void {
   editing.value = null
   formOpen.value = true
 }
-function openEdit(u: ManagedUser): void {
+function openEdit(m: MemberRow): void {
   error.value = null
   formMode.value = 'edit'
-  editing.value = u
+  editing.value = m
   formOpen.value = true
 }
 function closeForm(): void {
@@ -84,41 +96,52 @@ function closeForm(): void {
 
 async function handleSubmit(values: MemberFormValues): Promise<void> {
   if (formMode.value === 'create') {
-    const id = await createUser({
+    const id = await createMember({
+      full_name: values.full_name,
       email: values.email,
+      phone: values.phone,
+      status: values.status,
+      monthly_due: values.monthly_due,
+      joined_at: values.joined_at,
       password: values.password,
       role: values.role,
-      full_name: values.full_name,
     })
     if (id) formOpen.value = false
   } else if (editing.value) {
-    const ok = await updateUser({
-      id: editing.value.id,
-      email: values.email,
-      full_name: values.full_name,
-      role: values.role,
-      password: values.password,
-    })
+    const ok = await updateMember(
+      {
+        id: editing.value.id,
+        full_name: values.full_name,
+        email: values.email,
+        phone: values.phone,
+        status: values.status,
+        monthly_due: values.monthly_due,
+        joined_at: values.joined_at,
+        role: values.role,
+        password: values.password,
+      },
+      editing.value.user_id,
+    )
     if (ok) formOpen.value = false
   }
 }
 
 // --- Silme onayı ----------------------------------------------------------
-const deleteTarget = ref<ManagedUser | null>(null)
-function openDelete(u: ManagedUser): void {
+const deleteTarget = ref<MemberRow | null>(null)
+function openDelete(m: MemberRow): void {
   error.value = null
-  deleteTarget.value = u
+  deleteTarget.value = m
 }
 function closeDelete(): void {
   deleteTarget.value = null
 }
 async function confirmDelete(): Promise<void> {
   if (!deleteTarget.value) return
-  const ok = await deleteUser(deleteTarget.value.id)
+  const ok = await deleteMember(deleteTarget.value.id, deleteTarget.value.user_id)
   if (ok) deleteTarget.value = null
 }
 
-onMounted(listUsers)
+onMounted(listMembers)
 </script>
 
 <template>
@@ -128,7 +151,7 @@ onMounted(listUsers)
         <h1 class="text-2xl font-semibold tracking-tight">Üyeler</h1>
         <p class="mt-1 text-sm text-muted">
           Üyeleri görüntüleyin, arayın ve yönetin.
-          <span class="text-faint">Toplam {{ users.length }} kayıt.</span>
+          <span class="text-faint">Toplam {{ members.length }} kayıt.</span>
         </p>
       </div>
 
@@ -136,7 +159,7 @@ onMounted(listUsers)
         <button
           class="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-muted shadow-card transition hover:bg-zinc-500/5 hover:text-content disabled:opacity-60"
           :disabled="loading"
-          @click="listUsers"
+          @click="listMembers"
         >
           <component
             :is="loading ? Loader2 : RefreshCw"
@@ -174,78 +197,89 @@ onMounted(listUsers)
         <thead class="border-b border-line text-xs font-medium uppercase tracking-wider text-faint">
           <tr>
             <th class="px-4 py-3.5 font-medium">Üye</th>
-            <th class="px-4 py-3.5 font-medium">Rol</th>
+            <th class="px-4 py-3.5 font-medium">Rol / Giriş</th>
+            <th class="px-4 py-3.5 font-medium">Durum</th>
             <th class="px-4 py-3.5 font-medium">Kayıt Tarihi</th>
             <th v-if="canCreate" class="px-4 py-3.5 text-right font-medium">İşlemler</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-line">
-          <tr v-if="loading && users.length === 0">
-            <td :colspan="canCreate ? 4 : 3" class="px-4 py-12 text-center text-muted">
+          <tr v-if="loading && members.length === 0">
+            <td :colspan="canCreate ? 5 : 4" class="px-4 py-12 text-center text-muted">
               <Loader2 class="mx-auto h-5 w-5 animate-spin" />
             </td>
           </tr>
           <tr v-else-if="filtered.length === 0">
-            <td :colspan="canCreate ? 4 : 3" class="px-4 py-14 text-center">
+            <td :colspan="canCreate ? 5 : 4" class="px-4 py-14 text-center">
               <UsersIcon class="mx-auto mb-3 h-8 w-8 text-faint" />
               <p class="text-sm font-medium text-content">
                 {{ search ? 'Eşleşen üye bulunamadı' : 'Henüz üye yok' }}
               </p>
               <p class="mt-1 text-sm text-muted">
-                {{ search ? 'Farklı bir arama deneyin.' : 'İlk üyeyi ekleyerek başlayın.' }}
+                {{ search ? 'Farklı bir arama deneyin.' : 'İlk üyeyi ekleyerek ya da Excel içe aktararak başlayın.' }}
               </p>
             </td>
           </tr>
-          <tr v-for="u in filtered" :key="u.id" class="transition hover:bg-zinc-500/5">
+          <tr v-for="m in filtered" :key="m.id" class="transition hover:bg-zinc-500/5">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <span
                   class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent"
                 >
-                  {{ initialOf(u) }}
+                  {{ initialOf(m) }}
                 </span>
                 <div class="min-w-0">
                   <p class="truncate font-medium text-content">
-                    {{ u.full_name ?? '—' }}
-                    <span v-if="isSelf(u)" class="ml-1 text-xs font-normal text-faint">(siz)</span>
+                    {{ m.full_name }}
+                    <span v-if="isSelf(m)" class="ml-1 text-xs font-normal text-faint">(siz)</span>
                   </p>
-                  <p class="truncate font-mono text-xs text-muted">{{ u.email ?? '—' }}</p>
+                  <p class="truncate font-mono text-xs text-muted">{{ m.email ?? '—' }}</p>
                 </div>
               </div>
             </td>
             <td class="px-4 py-3">
               <span
+                v-if="m.role"
                 class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
-                :class="roleBadgeClass[u.role]"
+                :class="roleBadgeClass[m.role]"
               >
-                {{ ROLE_LABELS[u.role] }}
+                {{ ROLE_LABELS[m.role] }}
+              </span>
+              <span v-else class="text-xs text-faint">Giriş yok</span>
+            </td>
+            <td class="px-4 py-3">
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+                :class="statusBadgeClass[m.status]"
+              >
+                {{ MEMBER_STATUS_LABELS[m.status] }}
               </span>
             </td>
             <td class="px-4 py-3 font-mono text-xs text-faint">
-              {{ new Date(u.created_at).toLocaleDateString('tr-TR') }}
+              {{ new Date(m.created_at).toLocaleDateString('tr-TR') }}
             </td>
             <td v-if="canCreate" class="px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <button
-                  v-if="canManage(u)"
+                  v-if="canManage(m)"
                   class="rounded-lg p-2 text-muted transition hover:bg-accent/10 hover:text-accent"
                   title="Düzenle"
-                  @click="openEdit(u)"
+                  @click="openEdit(m)"
                 >
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
-                  v-if="canManage(u) && !isSelf(u)"
+                  v-if="canManage(m) && !isSelf(m)"
                   class="rounded-lg p-2 text-muted transition hover:bg-danger/10 hover:text-danger"
                   title="Sil"
-                  @click="openDelete(u)"
+                  @click="openDelete(m)"
                 >
                   <Trash2 class="h-4 w-4" />
                 </button>
                 <span
-                  v-if="!canManage(u)"
+                  v-if="!canManage(m)"
                   class="px-2 text-xs text-faint"
-                  title="Bu kullanıcıyı yönetme yetkiniz yok"
+                  title="Bu üyeyi yönetme yetkiniz yok"
                 >—</span>
               </div>
             </td>
@@ -269,7 +303,7 @@ onMounted(listUsers)
     <ConfirmDialog
       :open="deleteTarget !== null"
       title="Üyeyi sil"
-      :message="`“${deleteTarget?.full_name ?? deleteTarget?.email ?? 'Bu üye'}” kalıcı olarak silinecek. Bu işlem geri alınamaz.`"
+      :message="`“${deleteTarget?.full_name ?? 'Bu üye'}” kalıcı olarak silinecek. Bu işlem geri alınamaz.`"
       :busy="deleting"
       :error="error"
       @confirm="confirmDelete"
