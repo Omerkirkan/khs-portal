@@ -34,6 +34,8 @@ export interface DuesSummary {
   debtorCount: number
   /** Hiçbir üyeyle eşleşmeyen aidat ödemelerinin toplamı. */
   unmatchedPaid: number
+  /** İçinde bulunduğumuz aya ait toplam aidat tahsilatı (eşleşen + eşleşmeyen). */
+  currentMonthPaid: number
 }
 
 /** "YYYY-MM" döneminin bugünkü değerini döner. */
@@ -68,6 +70,7 @@ export function useDues() {
     totalDebt: 0,
     debtorCount: 0,
     unmatchedPaid: 0,
+    currentMonthPaid: 0,
   })
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -104,8 +107,10 @@ export function useDues() {
       const paidByKey = new Map<string, Map<string, number>>()
       const memberKeys = new Set(members.map((m) => nameKey(m.full_name)))
       let unmatchedPaid = 0
+      let currentMonthPaid = 0
       for (const t of txns) {
         const period = t.period || cur
+        if (period === cur) currentMonthPaid += Number(t.amount)
         if (!t.counterparty_name) {
           unmatchedPaid += Number(t.amount)
           continue
@@ -205,6 +210,7 @@ export function useDues() {
         totalDebt: sumDebt,
         debtorCount: debtors,
         unmatchedPaid,
+        currentMonthPaid,
       }
     } catch (err) {
       error.value = toMessage(err, 'Aidat verileri yüklenemedi.')
