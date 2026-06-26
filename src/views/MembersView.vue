@@ -11,6 +11,7 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useMembers } from '@/composables/useMembers'
+import { useDuesTypes } from '@/composables/useDuesTypes'
 import MemberFormModal, { type MemberFormValues } from '@/components/domain/MemberFormModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import {
@@ -33,6 +34,7 @@ const {
   updateMember,
   deleteMember,
 } = useMembers()
+const { types: duesTypes, listTypes } = useDuesTypes()
 
 const roleBadgeClass: Record<AppRole, string> = {
   superadmin: 'bg-accent/10 text-accent ring-accent/20',
@@ -50,6 +52,19 @@ const statusBadgeClass: Record<MemberStatus, string> = {
 /** Avatar için ad/e-postadan baş harf üretir. */
 function initialOf(m: MemberRow): string {
   return (m.full_name || m.email || '?').trim().charAt(0).toUpperCase()
+}
+
+const tl = new Intl.NumberFormat('tr-TR', {
+  style: 'currency',
+  currency: 'TRY',
+  maximumFractionDigits: 0,
+})
+
+/** Üyenin beklenen aylık aidatı: tip atanmışsa tipin adı+tutarı, yoksa özel tutar. */
+function memberDue(m: MemberRow): { label: string; amount: string } {
+  const type = m.dues_type_id ? duesTypes.value.find((t) => t.id === m.dues_type_id) : null
+  if (type) return { label: type.name, amount: tl.format(type.amount) }
+  return { label: 'Özel', amount: tl.format(m.monthly_due) }
 }
 
 // --- Arama / filtre -------------------------------------------------------
@@ -102,6 +117,7 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
       phone: values.phone,
       status: values.status,
       monthly_due: values.monthly_due,
+      dues_type_id: values.dues_type_id,
       joined_at: values.joined_at,
       password: values.password,
       role: values.role,
@@ -116,6 +132,7 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
         phone: values.phone,
         status: values.status,
         monthly_due: values.monthly_due,
+        dues_type_id: values.dues_type_id,
         joined_at: values.joined_at,
         role: values.role,
         password: values.password,
@@ -141,7 +158,10 @@ async function confirmDelete(): Promise<void> {
   if (ok) deleteTarget.value = null
 }
 
-onMounted(listMembers)
+onMounted(() => {
+  listMembers()
+  listTypes()
+})
 </script>
 
 <template>
@@ -198,6 +218,7 @@ onMounted(listMembers)
           <tr>
             <th class="px-4 py-3.5 font-medium">Üye</th>
             <th class="px-4 py-3.5 font-medium">Rol / Giriş</th>
+            <th class="px-4 py-3.5 font-medium">Aidat</th>
             <th class="px-4 py-3.5 font-medium">Durum</th>
             <th class="px-4 py-3.5 font-medium">Kayıt Tarihi</th>
             <th v-if="canCreate" class="px-4 py-3.5 text-right font-medium">İşlemler</th>
@@ -205,12 +226,12 @@ onMounted(listMembers)
         </thead>
         <tbody class="divide-y divide-line">
           <tr v-if="loading && members.length === 0">
-            <td :colspan="canCreate ? 5 : 4" class="px-4 py-12 text-center text-muted">
+            <td :colspan="canCreate ? 6 : 5" class="px-4 py-12 text-center text-muted">
               <Loader2 class="mx-auto h-5 w-5 animate-spin" />
             </td>
           </tr>
           <tr v-else-if="filtered.length === 0">
-            <td :colspan="canCreate ? 5 : 4" class="px-4 py-14 text-center">
+            <td :colspan="canCreate ? 6 : 5" class="px-4 py-14 text-center">
               <UsersIcon class="mx-auto mb-3 h-8 w-8 text-faint" />
               <p class="text-sm font-medium text-content">
                 {{ search ? 'Eşleşen üye bulunamadı' : 'Henüz üye yok' }}
@@ -246,6 +267,10 @@ onMounted(listMembers)
                 {{ ROLE_LABELS[m.role] }}
               </span>
               <span v-else class="text-xs text-faint">Giriş yok</span>
+            </td>
+            <td class="px-4 py-3">
+              <p class="font-mono text-sm text-content">{{ memberDue(m).amount }}</p>
+              <p class="text-xs text-faint">{{ memberDue(m).label }}</p>
             </td>
             <td class="px-4 py-3">
               <span
@@ -293,6 +318,7 @@ onMounted(listMembers)
       :open="formOpen"
       :mode="formMode"
       :member="editing"
+      :dues-types="duesTypes"
       :submitting="submitting"
       :error="error"
       @submit="handleSubmit"

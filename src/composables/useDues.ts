@@ -89,19 +89,26 @@ export function useDues() {
     loading.value = true
     error.value = null
     try {
-      const [membersRes, txnRes] = await Promise.all([
-        supabase.from('members').select('id, full_name, status, monthly_due, joined_at'),
+      const [membersRes, txnRes, typesRes] = await Promise.all([
+        supabase.from('members').select('id, full_name, status, monthly_due, dues_type_id, joined_at'),
         supabase
           .from('transactions')
           .select('counterparty_name, period, amount')
           .eq('kind', 'aidat'),
+        supabase.from('dues_types').select('id, amount'),
       ])
       if (membersRes.error) throw membersRes.error
       if (txnRes.error) throw txnRes.error
+      if (typesRes.error) throw typesRes.error
 
       const members = membersRes.data ?? []
       const txns = txnRes.data ?? []
       const cur = currentPeriod()
+
+      // Aidat tipi tutarları: üyeye tip atanmışsa beklenen aidat tipin GÜNCEL tutarıdır.
+      const amountByType = new Map<string, number>(
+        (typesRes.data ?? []).map((t) => [t.id, Number(t.amount)]),
+      )
 
       // Ödemeleri name_key + dönem bazında topla.
       const paidByKey = new Map<string, Map<string, number>>()
@@ -153,7 +160,11 @@ export function useDues() {
         const joinedPeriod = (m.joined_at ?? '').slice(0, 7)
         const liable = m.status !== 'inactive'
         const byPeriod = paidByKey.get(key) ?? new Map<string, number>()
-        const monthlyDue = Number(m.monthly_due)
+        // Tip atanmışsa tipin tutarı; değilse üyenin özel tutarı (monthly_due).
+        const monthlyDue =
+          m.dues_type_id != null
+            ? (amountByType.get(m.dues_type_id) ?? Number(m.monthly_due))
+            : Number(m.monthly_due)
 
         const cells: Record<string, DuesCell> = {}
         let totalExpected = 0

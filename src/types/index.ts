@@ -26,7 +26,20 @@ export type Member = {
   status: MemberStatus
   user_id: string | null
   monthly_due: number
+  /** Atanmış aidat tipi (varsa beklenen aidat tipin tutarıdır). Null = özel tutar. */
+  dues_type_id: string | null
   joined_at: string
+  created_at: string
+}
+
+/**
+ * public.dues_types satırı — adlandırılmış aidat şablonu (örn. "Tam" = 2000 ₺).
+ * Not: Supabase `Database` jeneriği gereği `interface` değil `type`.
+ */
+export type DuesType = {
+  id: string
+  name: string
+  amount: number
   created_at: string
 }
 
@@ -69,8 +82,10 @@ export interface MemberRow {
   status: MemberStatus
   user_id: string | null
   role: AppRole | null
-  /** Aylık aidat tutarı (TL). */
+  /** Özel aylık aidat tutarı (TL). Tip atanmışsa beklenen aidat tipin tutarıdır. */
   monthly_due: number
+  /** Atanmış aidat tipinin id'si; null ise özel tutar (monthly_due) kullanılır. */
+  dues_type_id: string | null
   /** Üyelik başlangıcı (YYYY-MM-DD) — borç bu aydan itibaren hesaplanır. */
   joined_at: string
   created_at: string

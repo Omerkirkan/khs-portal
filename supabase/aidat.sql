@@ -207,8 +207,52 @@ from public.profiles p
 where not exists (select 1 from public.members m where m.user_id = p.id)
 on conflict (name_key) do nothing;
 
+-- 8) Aidat tipleri (dues_types) ----------------------------------------------
+--    Adlandırılmış aidat şablonları: "Tam = 2000", "Öğrenci = 500", "İşsiz = 1000".
+--    Bir üyeye tip atandığında beklenen aylık aidatı o tipin GÜNCEL tutarıdır
+--    (tipin tutarı değişince o tipteki tüm üyeler otomatik etkilenir). Tip
+--    atanmamış üyeler members.monthly_due (özel tutar) ile hesaplanır.
+create table if not exists public.dues_types (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  amount      numeric(12, 2) not null default 0 check (amount >= 0),
+  created_at  timestamptz not null default now()
+);
+
+-- Aynı isimli tip tekrarını engeller (büyük/küçük harf duyarsız).
+create unique index if not exists dues_types_name_uniq
+  on public.dues_types (lower(btrim(name)));
+
+-- Üyeye atanan aidat tipi (opsiyonel). Tip silinirse üye özel tutara düşer.
+alter table public.members
+  add column if not exists dues_type_id uuid
+  references public.dues_types(id) on delete set null;
+
+create index if not exists members_dues_type_id_idx on public.members (dues_type_id);
+
+-- RLS: tüm girişli kullanıcılar tipleri görebilir; yalnızca admin yönetir.
+alter table public.dues_types enable row level security;
+
+drop policy if exists "dues_types_select" on public.dues_types;
+create policy "dues_types_select" on public.dues_types
+  for select to authenticated using (true);
+
+drop policy if exists "dues_types_insert" on public.dues_types;
+create policy "dues_types_insert" on public.dues_types
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "dues_types_update" on public.dues_types;
+create policy "dues_types_update" on public.dues_types
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "dues_types_delete" on public.dues_types;
+create policy "dues_types_delete" on public.dues_types
+  for delete to authenticated using (public.is_admin());
+
+grant select, insert, update, delete on public.dues_types to authenticated;
+
 -- =============================================================================
 -- NOT: Bu betiği çalıştırdıktan sonra `src/types/database.ts` zaten members/
--- transactions tablolarını ve member_set_login RPC'sini içerir; ek bir şey
--- yapmanıza gerek yoktur.
+-- transactions/dues_types tablolarını ve member_set_login RPC'sini içerir; ek
+-- bir şey yapmanıza gerek yoktur.
 -- =============================================================================

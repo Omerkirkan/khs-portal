@@ -9,6 +9,8 @@ export interface CreateMemberInput {
   phone?: string | null
   status?: MemberStatus
   monthly_due?: number
+  /** Atanan aidat tipi; null ise özel tutar (monthly_due) geçerlidir. */
+  dues_type_id?: string | null
   joined_at?: string
   /** Dolu ise üyeye giriş hesabı da açılır (e-posta + bu şifre + rol). */
   password?: string
@@ -23,6 +25,8 @@ export interface UpdateMemberInput {
   phone?: string | null
   status: MemberStatus
   monthly_due?: number
+  /** Atanan aidat tipi; null ise özel tutar (monthly_due) geçerlidir. */
+  dues_type_id?: string | null
   joined_at?: string
   /** Üyenin login rolü (giriş hesabı varsa veya açılacaksa). */
   role?: AppRole
@@ -77,6 +81,7 @@ export function useMembers() {
         user_id: m.user_id,
         role: m.user_id ? (roleByUser.get(m.user_id) ?? null) : null,
         monthly_due: m.monthly_due,
+        dues_type_id: m.dues_type_id,
         joined_at: m.joined_at,
         created_at: m.created_at,
       }))
@@ -103,6 +108,7 @@ export function useMembers() {
           phone: input.phone?.trim() || null,
           status: input.status ?? 'active',
           ...(input.monthly_due != null ? { monthly_due: input.monthly_due } : {}),
+          dues_type_id: input.dues_type_id ?? null,
           ...(input.joined_at ? { joined_at: input.joined_at } : {}),
         })
         .select('id')
@@ -174,6 +180,7 @@ export function useMembers() {
           phone: input.phone?.trim() || null,
           status: input.status,
           ...(input.monthly_due != null ? { monthly_due: input.monthly_due } : {}),
+          dues_type_id: input.dues_type_id ?? null,
           ...(input.joined_at ? { joined_at: input.joined_at } : {}),
         })
         .eq('id', input.id)

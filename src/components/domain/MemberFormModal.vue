@@ -7,6 +7,7 @@ import {
   ROLE_LABELS,
   MEMBER_STATUS_LABELS,
   type AppRole,
+  type DuesType,
   type MemberRow,
   type MemberStatus,
 } from '@/types'
@@ -18,6 +19,8 @@ export interface MemberFormValues {
   phone: string
   status: MemberStatus
   monthly_due: number
+  /** Atanan aidat tipi; null ise özel tutar (monthly_due) geçerlidir. */
+  dues_type_id: string | null
   joined_at: string
   password: string
   role: AppRole
@@ -28,6 +31,8 @@ const props = defineProps<{
   mode: 'create' | 'edit'
   /** edit modunda düzenlenen üye; create modunda null. */
   member: MemberRow | null
+  /** Atanabilir aidat tipleri (Ayarlar → Aidatlar'da tanımlanır). */
+  duesTypes: DuesType[]
   submitting: boolean
   error: string | null
 }>()
@@ -44,6 +49,8 @@ const email = ref('')
 const phone = ref('')
 const status = ref<MemberStatus>('active')
 const monthlyDue = ref(2000)
+/** '' = özel tutar; aksi halde seçili aidat tipinin id'si. */
+const duesTypeId = ref('')
 const joinedAt = ref('')
 const password = ref('')
 const role = ref<AppRole>('member')
@@ -59,6 +66,20 @@ const isEdit = computed(() => props.mode === 'edit')
 const hasLogin = computed(() => isEdit.value && !!props.member?.user_id)
 
 const statuses: MemberStatus[] = ['active', 'inactive', 'overdue']
+
+/** Seçili aidat tipi (yoksa null = özel tutar). */
+const selectedType = computed<DuesType | null>(
+  () => props.duesTypes.find((t) => t.id === duesTypeId.value) ?? null,
+)
+/** Tabloda/önizlemede gösterilecek beklenen aylık aidat. */
+const effectiveDue = computed(() =>
+  selectedType.value ? selectedType.value.amount : Number(monthlyDue.value) || 0,
+)
+const tl = new Intl.NumberFormat('tr-TR', {
+  style: 'currency',
+  currency: 'TRY',
+  maximumFractionDigits: 0,
+})
 
 /** Yetki kuralı: admin yalnızca member/keyholder atayabilir; superadmin hepsini. */
 const availableRoles = computed<AppRole[]>(() =>
@@ -79,6 +100,7 @@ watch(
       phone.value = props.member.phone ?? ''
       status.value = props.member.status
       monthlyDue.value = props.member.monthly_due
+      duesTypeId.value = props.member.dues_type_id ?? ''
       joinedAt.value = props.member.joined_at?.slice(0, 10) ?? today()
       role.value = props.member.role ?? 'member'
     } else {
@@ -87,6 +109,7 @@ watch(
       phone.value = ''
       status.value = 'active'
       monthlyDue.value = 2000
+      duesTypeId.value = ''
       joinedAt.value = today()
       role.value = 'member'
     }
@@ -113,6 +136,7 @@ function onSubmit(): void {
     phone: phone.value,
     status: status.value,
     monthly_due: Number(monthlyDue.value) || 0,
+    dues_type_id: duesTypeId.value || null,
     joined_at: joinedAt.value,
     password: password.value,
     role: role.value,
@@ -162,8 +186,25 @@ function onSubmit(): void {
         </label>
 
         <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium text-content">Aidat Tipi</span>
+          <select
+            v-model="duesTypeId"
+            class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
+          >
+            <option value="">Özel tutar</option>
+            <option v-for="t in duesTypes" :key="t.id" :value="t.id">
+              {{ t.name }} — {{ tl.format(t.amount) }}
+            </option>
+          </select>
+          <span class="text-xs text-faint">
+            Tip seçilirse beklenen aidat tipin güncel tutarıdır.
+          </span>
+        </label>
+
+        <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-content">Aylık Aidat (₺)</span>
           <input
+            v-if="!selectedType"
             v-model.number="monthlyDue"
             type="number"
             min="0"
@@ -171,6 +212,14 @@ function onSubmit(): void {
             placeholder="2000"
             class="rounded-lg border border-line bg-input px-3 py-2 font-mono text-sm text-content placeholder:font-sans placeholder:text-faint focus:border-accent"
           >
+          <input
+            v-else
+            :value="tl.format(effectiveDue)"
+            type="text"
+            readonly
+            class="cursor-not-allowed rounded-lg border border-line bg-base/40 px-3 py-2 font-mono text-sm text-muted"
+          >
+          <span v-if="selectedType" class="text-xs text-faint">“{{ selectedType.name }}” tipinden geliyor.</span>
         </label>
 
         <label class="flex flex-col gap-1.5">
