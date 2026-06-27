@@ -43,6 +43,12 @@ const router = createRouter({
           meta: { allowedRoles: ['superadmin', 'admin'] },
         },
         {
+          path: 'hesap-hareketleri',
+          name: 'account-activity',
+          component: () => import('@/views/AccountActivityView.vue'),
+          meta: { allowedRoles: ['superadmin', 'admin'] },
+        },
+        {
           path: 'import',
           name: 'import',
           component: () => import('@/views/ImportView.vue'),

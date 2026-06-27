@@ -6,6 +6,7 @@ import {
   Users,
   CreditCard,
   Gift,
+  Receipt,
   Settings,
   LogOut,
   Menu,
@@ -48,6 +49,7 @@ const nav: NavItem[] = [
   { name: 'members', label: 'Üyeler', icon: Users, section: 'Yönetim', allowedRoles: ['superadmin', 'admin', 'keyholder'] },
   { name: 'dues', label: 'Aidatlar', icon: CreditCard, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
   { name: 'donations', label: 'Bağışlar', icon: Gift, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
+  { name: 'account-activity', label: 'Hesap Hareketleri', icon: Receipt, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
   { name: 'settings', label: 'Ayarlar', icon: Settings, section: 'Hesap' },
 ]
 
