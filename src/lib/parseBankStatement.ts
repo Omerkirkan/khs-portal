@@ -57,11 +57,15 @@ const MONTHS = [
   'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik',
 ]
 
-/** Açıklama metninden işlem türünü belirler. */
-function classify(descFold: string): TxnKind {
+/**
+ * Açıklama metninden işlem türünü belirler. Açıklamada "aidat"/"bağış" geçmiyorsa:
+ * gelen (pozitif tutar) işlem bağış sayılır; giden (negatif) işlem 'diğer' kalır
+ * (banka gideri/transfer bağış olarak raporlanmamalı).
+ */
+function classify(descFold: string, amount: number): TxnKind {
   if (descFold.includes('bagis')) return 'bagis'
   if (descFold.includes('aidat')) return 'aidat'
-  return 'diger'
+  return amount > 0 ? 'bagis' : 'diger'
 }
 
 /** Yalnızca Türkçe BÜYÜK harf (ve kesme işareti) içeren bir ad parçası mı? */
@@ -165,6 +169,7 @@ export function parseBankStatement(data: ArrayBuffer): ParseResult {
     const descFold = fold(description)
     const { iso, rawDate, period: txnPeriod } = parseDate(r[cDate])
     const { sn, name } = extractParty(description)
+    const amount = parseAmount(r[cAmount])
 
     transactions.push({
       txnDate: iso,
@@ -172,8 +177,8 @@ export function parseBankStatement(data: ArrayBuffer): ParseResult {
       channel: String(r[cChannel] ?? '').trim(),
       receiptNo: String(r[cReceipt] ?? '').trim(),
       description,
-      amount: parseAmount(r[cAmount]),
-      kind: classify(descFold),
+      amount,
+      kind: classify(descFold, amount),
       counterpartyName: name,
       counterpartySn: sn,
       refNo: (/(?:FastRef|EftRef):\s*(\d+)/i.exec(description) ?? [])[1] ?? null,
