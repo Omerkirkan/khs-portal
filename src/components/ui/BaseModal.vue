@@ -36,8 +36,8 @@ onBeforeUnmount(() => {
         role="dialog"
         aria-modal="true"
       >
-        <div class="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-pop">
-          <header class="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+        <div class="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-2xl border border-line bg-surface shadow-pop">
+          <header class="flex shrink-0 items-start justify-between gap-4 border-b border-line px-6 py-4">
             <div class="min-w-0">
               <h2 class="text-base font-semibold tracking-tight text-content">{{ title }}</h2>
               <p v-if="subtitle" class="mt-0.5 truncate text-sm text-muted">{{ subtitle }}</p>
@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
             </button>
           </header>
 
-          <div class="px-6 py-5">
+          <div class="overflow-y-auto px-6 py-5">
             <slot />
           </div>
         </div>

@@ -429,7 +429,7 @@ function onSubmit(): void {
         <span>{{ error }}</span>
       </p>
 
-      <div class="flex justify-end gap-3 pt-1">
+      <div class="sticky bottom-0 -mx-6 -mb-5 mt-2 flex justify-end gap-3 border-t border-line bg-surface px-6 py-4">
         <button
           type="button"
           class="rounded-lg border border-line px-4 py-2 text-sm font-medium text-muted transition hover:bg-zinc-500/10 hover:text-content"
