@@ -57,6 +57,17 @@ export type DuesType = {
   created_at: string
 }
 
+/**
+ * public.app_settings satırı — tek satırlık (singleton) portal ayarları.
+ * Not: Supabase `Database` jeneriği gereği `interface` değil `type`.
+ */
+export type AppSettings = {
+  id: boolean
+  /** Global aidat takibi başlangıcı (YYYY-MM-DD). Null = en erken aktiviteden. */
+  dues_start: string | null
+  updated_at: string
+}
+
 /** public.txn_kind enum'u ile birebir. */
 export type TxnKind = 'aidat' | 'bagis' | 'diger'
 

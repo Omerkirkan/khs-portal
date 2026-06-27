@@ -89,17 +89,22 @@ export function useDues() {
     loading.value = true
     error.value = null
     try {
-      const [membersRes, txnRes, typesRes] = await Promise.all([
+      const [membersRes, txnRes, typesRes, settingsRes] = await Promise.all([
         supabase.from('members').select('id, full_name, status, monthly_due, dues_type_id, joined_at'),
         supabase
           .from('transactions')
           .select('counterparty_name, period, amount')
           .eq('kind', 'aidat'),
         supabase.from('dues_types').select('id, amount'),
+        supabase.from('app_settings').select('dues_start').eq('id', true).maybeSingle(),
       ])
       if (membersRes.error) throw membersRes.error
       if (txnRes.error) throw txnRes.error
       if (typesRes.error) throw typesRes.error
+      if (settingsRes.error) throw settingsRes.error
+
+      // Global aidat takibi başlangıcı ('YYYY-MM'); öncesi hesaba katılmaz.
+      const duesStart = settingsRes.data?.dues_start ? settingsRes.data.dues_start.slice(0, 7) : null
 
       const members = membersRes.data ?? []
       const txns = txnRes.data ?? []
@@ -145,6 +150,9 @@ export function useDues() {
           if (p > maxP) maxP = p
         }
       }
+      // Aidat takibi başlangıcı ayarlıysa bu aydan öncesini kırp (üye o aydan
+      // önce katılmış olsa bile borç bu aydan itibaren sayılır).
+      if (duesStart && duesStart > minP) minP = duesStart
       const cols = monthRange(minP, maxP)
       periods.value = cols
 

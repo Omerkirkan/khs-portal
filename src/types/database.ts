@@ -1,4 +1,4 @@
-import type { AppRole, DuesType, Member, MemberStatus, Profile, Transaction, TxnKind, UserRole } from '@/types'
+import type { AppRole, AppSettings, DuesType, Member, MemberStatus, Profile, Transaction, TxnKind, UserRole } from '@/types'
 
 /**
  * Supabase şemasının TypeScript tip tanımı.
@@ -101,6 +101,20 @@ export interface Database {
           name?: string
           amount?: number
           created_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: AppSettings
+        Insert: {
+          id?: boolean
+          dues_start?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          dues_start?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

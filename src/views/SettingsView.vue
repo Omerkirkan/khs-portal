@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Coins, SlidersHorizontal, type LucideIcon } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import DuesTypesPanel from '@/components/domain/DuesTypesPanel.vue'
+import GeneralSettingsPanel from '@/components/domain/GeneralSettingsPanel.vue'
 
 const auth = useAuthStore()
 
@@ -58,18 +59,7 @@ const active = ref<TabId>(tabs.value[0]?.id ?? 'general')
       <div class="min-w-0 flex-1">
         <DuesTypesPanel v-if="active === 'dues'" />
 
-        <div
-          v-else-if="active === 'general'"
-          class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line bg-surface px-6 py-16 text-center"
-        >
-          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
-            <SlidersHorizontal class="h-6 w-6" />
-          </span>
-          <div>
-            <p class="text-sm font-medium text-content">Genel ayarlar yakında</p>
-            <p class="mt-1 text-sm text-muted">Hesap ve portal tercihleri bir sonraki sürümde gelecek.</p>
-          </div>
-        </div>
+        <GeneralSettingsPanel v-else-if="active === 'general'" />
       </div>
     </div>
   </section>

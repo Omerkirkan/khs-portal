@@ -270,6 +270,34 @@ alter table public.members
 create unique index if not exists members_tc_no_uniq
   on public.members (tc_no) where tc_no is not null;
 
+-- 10) Portal ayarları (tek satırlık singleton) -------------------------------
+--    Global aidat takibi başlangıcı: borç/ödeme matrisi bu AYDAN itibaren
+--    hesaplanır; daha öncesi dikkate alınmaz. NULL ise eski davranış (en erken
+--    üyelik/ödeme ayından itibaren) geçerlidir.
+create table if not exists public.app_settings (
+  -- Singleton: tabloda yalnızca tek satır (id = true) bulunur.
+  id          boolean primary key default true,
+  dues_start  date,
+  updated_at  timestamptz not null default now(),
+  constraint app_settings_singleton check (id)
+);
+
+-- Tek satırı garanti et (varsa dokunma).
+insert into public.app_settings (id) values (true) on conflict (id) do nothing;
+
+-- RLS: tüm girişli kullanıcılar okuyabilir; yalnızca admin günceller.
+alter table public.app_settings enable row level security;
+
+drop policy if exists "app_settings_select" on public.app_settings;
+create policy "app_settings_select" on public.app_settings
+  for select to authenticated using (true);
+
+drop policy if exists "app_settings_update" on public.app_settings;
+create policy "app_settings_update" on public.app_settings
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+grant select, update on public.app_settings to authenticated;
+
 -- =============================================================================
 -- NOT: Bu betiği çalıştırdıktan sonra `src/types/database.ts` zaten members/
 -- transactions/dues_types tablolarını ve member_set_login RPC'sini içerir; ek
