@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   Users as UsersIcon,
   Loader2,
   RefreshCw,
   UserPlus,
+  Upload,
   Pencil,
   Trash2,
   Search,
@@ -202,6 +204,15 @@ onMounted(() => {
           />
           Yenile
         </button>
+
+        <RouterLink
+          v-if="canCreate"
+          :to="{ name: 'member-import' }"
+          class="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-muted shadow-card transition hover:bg-zinc-500/5 hover:text-content"
+        >
+          <Upload class="h-4 w-4" />
+          Üye Aktar
+        </RouterLink>
 
         <button
           v-if="canCreate"

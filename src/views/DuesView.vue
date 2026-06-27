@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
   CreditCard,
   Loader2,
   RefreshCw,
+  Upload,
   Check,
   X,
   TrendingUp,
@@ -70,14 +72,23 @@ onMounted(loadDues)
           Üye bazında aylık aidat takibi. Ödemeler içe aktarılan banka işlemlerinden otomatik düşülür.
         </p>
       </div>
-      <button
-        class="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-muted shadow-card transition hover:bg-zinc-500/5 hover:text-content disabled:opacity-60"
-        :disabled="loading"
-        @click="loadDues"
-      >
-        <component :is="loading ? Loader2 : RefreshCw" class="h-4 w-4" :class="loading && 'animate-spin'" />
-        Yenile
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          class="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-muted shadow-card transition hover:bg-zinc-500/5 hover:text-content disabled:opacity-60"
+          :disabled="loading"
+          @click="loadDues"
+        >
+          <component :is="loading ? Loader2 : RefreshCw" class="h-4 w-4" :class="loading && 'animate-spin'" />
+          Yenile
+        </button>
+        <RouterLink
+          :to="{ name: 'import' }"
+          class="flex items-center gap-2 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-accent-fg shadow-card transition hover:bg-accent-dim"
+        >
+          <Upload class="h-4 w-4" />
+          İçe Aktar
+        </RouterLink>
+      </div>
     </header>
 
     <!-- Özet kartları -->

@@ -6,8 +6,6 @@ import {
   Users,
   CreditCard,
   Gift,
-  Upload,
-  UserPlus,
   Settings,
   LogOut,
   Menu,
@@ -50,8 +48,6 @@ const nav: NavItem[] = [
   { name: 'members', label: 'Üyeler', icon: Users, section: 'Yönetim', allowedRoles: ['superadmin', 'admin', 'keyholder'] },
   { name: 'dues', label: 'Aidatlar', icon: CreditCard, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
   { name: 'donations', label: 'Bağışlar', icon: Gift, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
-  { name: 'import', label: 'İçe Aktar', icon: Upload, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
-  { name: 'member-import', label: 'Üye Aktar', icon: UserPlus, section: 'Yönetim', allowedRoles: ['superadmin', 'admin'] },
   { name: 'settings', label: 'Ayarlar', icon: Settings, section: 'Hesap' },
 ]
 
