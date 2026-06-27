@@ -2,8 +2,26 @@ import { ref } from 'vue'
 import { supabase } from '@/lib/supabase'
 import type { AppRole, MemberRow, MemberStatus } from '@/types'
 
+/** Üyenin Excel/forma açık detay alanları (banka ekstresinde yoktur). */
+export interface MemberDetailFields {
+  /** T.C. Kimlik No. */
+  tc_no?: string | null
+  /** Cinsiyet (ERKEK/KADIN). */
+  gender?: string | null
+  /** Meslek. */
+  profession?: string | null
+  /** Öğrenim durumu. */
+  education?: string | null
+  /** İnternet sitesi. */
+  website?: string | null
+  /** Üye türü (Üye/Kurucu/Geçici Başkan …). */
+  member_type?: string | null
+  /** Doğum tarihi (YYYY-MM-DD). */
+  birth_date?: string | null
+}
+
 /** Yeni üye (login opsiyonel) oluşturma girdisi. */
-export interface CreateMemberInput {
+export interface CreateMemberInput extends MemberDetailFields {
   full_name: string
   email?: string | null
   phone?: string | null
@@ -18,7 +36,7 @@ export interface CreateMemberInput {
 }
 
 /** Üye güncelleme girdisi. */
-export interface UpdateMemberInput {
+export interface UpdateMemberInput extends MemberDetailFields {
   id: string
   full_name: string
   email?: string | null
@@ -32,6 +50,24 @@ export interface UpdateMemberInput {
   role?: AppRole
   /** Yeni şifre; login yoksa girilirse hesap açılır, varsa değiştirilir. Boşsa korunur. */
   password?: string
+}
+
+/** Detay alanlarını members tablosu yüküne çevirir (boş metinleri null'a indirger). */
+function detailPayload(input: MemberDetailFields) {
+  const norm = (v: string | null | undefined): string | null => {
+    if (v == null) return null
+    const t = v.trim()
+    return t || null
+  }
+  return {
+    tc_no: norm(input.tc_no),
+    gender: norm(input.gender),
+    profession: norm(input.profession),
+    education: norm(input.education),
+    website: norm(input.website),
+    member_type: norm(input.member_type),
+    birth_date: input.birth_date || null,
+  }
 }
 
 function toMessage(err: unknown, fallback: string): string {
@@ -83,6 +119,14 @@ export function useMembers() {
         monthly_due: m.monthly_due,
         dues_type_id: m.dues_type_id,
         joined_at: m.joined_at,
+        name_key: m.name_key,
+        tc_no: m.tc_no,
+        gender: m.gender,
+        profession: m.profession,
+        education: m.education,
+        website: m.website,
+        member_type: m.member_type,
+        birth_date: m.birth_date,
         created_at: m.created_at,
       }))
     } catch (err) {
@@ -110,6 +154,7 @@ export function useMembers() {
           ...(input.monthly_due != null ? { monthly_due: input.monthly_due } : {}),
           dues_type_id: input.dues_type_id ?? null,
           ...(input.joined_at ? { joined_at: input.joined_at } : {}),
+          ...detailPayload(input),
         })
         .select('id')
         .single()
@@ -182,6 +227,7 @@ export function useMembers() {
           ...(input.monthly_due != null ? { monthly_due: input.monthly_due } : {}),
           dues_type_id: input.dues_type_id ?? null,
           ...(input.joined_at ? { joined_at: input.joined_at } : {}),
+          ...detailPayload(input),
         })
         .eq('id', input.id)
       if (updErr) throw updErr

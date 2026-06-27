@@ -29,6 +29,20 @@ export type Member = {
   /** Atanmış aidat tipi (varsa beklenen aidat tipin tutarıdır). Null = özel tutar. */
   dues_type_id: string | null
   joined_at: string
+  /** T.C. Kimlik No (Kurum Üyelik Listesi içe aktarmasından). */
+  tc_no: string | null
+  /** Cinsiyet (ERKEK/KADIN). */
+  gender: string | null
+  /** Meslek. */
+  profession: string | null
+  /** Öğrenim durumu (Lise/Lisans/Yüksek Lisans …). */
+  education: string | null
+  /** İnternet sitesi. */
+  website: string | null
+  /** Üye türü (Üye/Kurucu/Geçici Başkan …). */
+  member_type: string | null
+  /** Doğum tarihi (YYYY-MM-DD). */
+  birth_date: string | null
   created_at: string
 }
 
@@ -88,6 +102,22 @@ export interface MemberRow {
   dues_type_id: string | null
   /** Üyelik başlangıcı (YYYY-MM-DD) — borç bu aydan itibaren hesaplanır. */
   joined_at: string
+  /** Türkçe-duyarlı eşleştirme anahtarı (içe aktarmada üye eşleşmesi için). */
+  name_key: string
+  /** T.C. Kimlik No (Kurum Üyelik Listesi içe aktarmasından). */
+  tc_no: string | null
+  /** Cinsiyet (ERKEK/KADIN). */
+  gender: string | null
+  /** Meslek. */
+  profession: string | null
+  /** Öğrenim durumu (Lise/Lisans/Yüksek Lisans …). */
+  education: string | null
+  /** İnternet sitesi. */
+  website: string | null
+  /** Üye türü (Üye/Kurucu/Geçici Başkan …). */
+  member_type: string | null
+  /** Doğum tarihi (YYYY-MM-DD). */
+  birth_date: string | null
   created_at: string
 }
 

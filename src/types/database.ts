@@ -58,6 +58,13 @@ export interface Database {
           monthly_due?: number
           dues_type_id?: string | null
           joined_at?: string
+          tc_no?: string | null
+          gender?: string | null
+          profession?: string | null
+          education?: string | null
+          website?: string | null
+          member_type?: string | null
+          birth_date?: string | null
           created_at?: string
         }
         Update: {
@@ -70,6 +77,13 @@ export interface Database {
           monthly_due?: number
           dues_type_id?: string | null
           joined_at?: string
+          tc_no?: string | null
+          gender?: string | null
+          profession?: string | null
+          education?: string | null
+          website?: string | null
+          member_type?: string | null
+          birth_date?: string | null
           created_at?: string
         }
         Relationships: []

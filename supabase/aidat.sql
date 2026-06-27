@@ -251,6 +251,25 @@ create policy "dues_types_delete" on public.dues_types
 
 grant select, insert, update, delete on public.dues_types to authenticated;
 
+-- 9) Üye detay alanları (Kurum Üyelik Listesi içe aktarma) --------------------
+--    "Kurum Üyelik Listesi.xlsx" üye başına banka ekstresinden çok daha fazla
+--    bilgi taşır. Bu alanlar üye formunda da görünür/düzenlenebilir; içe
+--    aktarmada doldurulur. Hepsi opsiyoneldir (eski/banka'dan eklenen üyelerde
+--    NULL kalır).
+alter table public.members
+  add column if not exists tc_no       text,
+  add column if not exists gender      text,
+  add column if not exists profession  text,
+  add column if not exists education   text,
+  add column if not exists website     text,
+  add column if not exists member_type text,
+  add column if not exists birth_date  date;
+
+-- T.C. Kimlik No tekilliği (yalnızca dolu olanlarda). İçe aktarmada üyeyi önce
+-- T.C., yoksa isim (name_key) ile eşleştirip "üzerine yazma" için kullanılır.
+create unique index if not exists members_tc_no_uniq
+  on public.members (tc_no) where tc_no is not null;
+
 -- =============================================================================
 -- NOT: Bu betiği çalıştırdıktan sonra `src/types/database.ts` zaten members/
 -- transactions/dues_types tablolarını ve member_set_login RPC'sini içerir; ek

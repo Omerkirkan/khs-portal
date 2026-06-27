@@ -121,6 +121,13 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
       joined_at: values.joined_at,
       password: values.password,
       role: values.role,
+      tc_no: values.tc_no,
+      gender: values.gender,
+      profession: values.profession,
+      education: values.education,
+      website: values.website,
+      member_type: values.member_type,
+      birth_date: values.birth_date,
     })
     if (id) formOpen.value = false
   } else if (editing.value) {
@@ -136,6 +143,13 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
         joined_at: values.joined_at,
         role: values.role,
         password: values.password,
+        tc_no: values.tc_no,
+        gender: values.gender,
+        profession: values.profession,
+        education: values.education,
+        website: values.website,
+        member_type: values.member_type,
+        birth_date: values.birth_date,
       },
       editing.value.user_id,
     )

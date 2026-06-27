@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { UserPlus, Save, Loader2, AlertCircle, Eye, EyeOff, RefreshCw, KeyRound } from 'lucide-vue-next'
+import { UserPlus, Save, Loader2, AlertCircle, Eye, EyeOff, RefreshCw, KeyRound, IdCard } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import {
@@ -24,6 +24,14 @@ export interface MemberFormValues {
   joined_at: string
   password: string
   role: AppRole
+  // Üye detay alanları (Kurum Üyelik Listesi içe aktarmasından da gelir).
+  tc_no: string
+  gender: string
+  profession: string
+  education: string
+  website: string
+  member_type: string
+  birth_date: string
 }
 
 const props = defineProps<{
@@ -55,6 +63,14 @@ const joinedAt = ref('')
 const password = ref('')
 const role = ref<AppRole>('member')
 const showPassword = ref(false)
+// Üye detay alanları.
+const tcNo = ref('')
+const gender = ref('')
+const profession = ref('')
+const education = ref('')
+const website = ref('')
+const memberType = ref('')
+const birthDate = ref('')
 
 /** "YYYY-MM-DD" bugün (date input varsayılanı için). */
 function today(): string {
@@ -103,6 +119,13 @@ watch(
       duesTypeId.value = props.member.dues_type_id ?? ''
       joinedAt.value = props.member.joined_at?.slice(0, 10) ?? today()
       role.value = props.member.role ?? 'member'
+      tcNo.value = props.member.tc_no ?? ''
+      gender.value = props.member.gender ?? ''
+      profession.value = props.member.profession ?? ''
+      education.value = props.member.education ?? ''
+      website.value = props.member.website ?? ''
+      memberType.value = props.member.member_type ?? ''
+      birthDate.value = props.member.birth_date?.slice(0, 10) ?? ''
     } else {
       fullName.value = ''
       email.value = ''
@@ -112,6 +135,13 @@ watch(
       duesTypeId.value = ''
       joinedAt.value = today()
       role.value = 'member'
+      tcNo.value = ''
+      gender.value = ''
+      profession.value = ''
+      education.value = ''
+      website.value = ''
+      memberType.value = ''
+      birthDate.value = ''
     }
     password.value = ''
     showPassword.value = false
@@ -140,6 +170,13 @@ function onSubmit(): void {
     joined_at: joinedAt.value,
     password: password.value,
     role: role.value,
+    tc_no: tcNo.value,
+    gender: gender.value,
+    profession: profession.value,
+    education: education.value,
+    website: website.value,
+    member_type: memberType.value,
+    birth_date: birthDate.value,
   })
 }
 </script>
@@ -231,6 +268,89 @@ function onSubmit(): void {
             <option v-for="s in statuses" :key="s" :value="s">{{ MEMBER_STATUS_LABELS[s] }}</option>
           </select>
         </label>
+      </div>
+
+      <!-- Kişisel/üyelik detayları (Kurum Üyelik Listesi içe aktarmasından doldurulabilir) -->
+      <div class="rounded-lg border border-line bg-base/40 p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <IdCard class="h-4 w-4 text-muted" />
+          <span class="text-sm font-medium text-content">Kişisel Bilgiler</span>
+          <span class="text-xs text-faint">(opsiyonel)</span>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">T.C. Kimlik No</span>
+            <input
+              v-model="tcNo"
+              type="text"
+              inputmode="numeric"
+              placeholder="00000000000"
+              class="rounded-lg border border-line bg-input px-3 py-2 font-mono text-sm text-content placeholder:font-sans placeholder:text-faint focus:border-accent"
+            >
+          </label>
+
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">Cinsiyet</span>
+            <select
+              v-model="gender"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
+            >
+              <option value="">—</option>
+              <option value="ERKEK">Erkek</option>
+              <option value="KADIN">Kadın</option>
+            </select>
+          </label>
+
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">Doğum Tarihi</span>
+            <input
+              v-model="birthDate"
+              type="date"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
+            >
+          </label>
+
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">Meslek</span>
+            <input
+              v-model="profession"
+              type="text"
+              placeholder="Bilgisayar Mühendisi"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content placeholder:text-faint focus:border-accent"
+            >
+          </label>
+
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">Öğrenim Durumu</span>
+            <input
+              v-model="education"
+              type="text"
+              placeholder="Lisans"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content placeholder:text-faint focus:border-accent"
+            >
+          </label>
+
+          <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-content">Üye Türü</span>
+            <input
+              v-model="memberType"
+              type="text"
+              placeholder="Üye"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content placeholder:text-faint focus:border-accent"
+            >
+          </label>
+
+          <label class="flex flex-col gap-1.5 sm:col-span-2">
+            <span class="text-sm font-medium text-content">İnternet Sitesi</span>
+            <input
+              v-model="website"
+              type="text"
+              placeholder="https://"
+              class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content placeholder:text-faint focus:border-accent"
+            >
+          </label>
+        </div>
       </div>
 
       <!-- Giriş bilgileri -->

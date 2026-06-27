@@ -49,6 +49,12 @@ const router = createRouter({
           meta: { allowedRoles: ['superadmin', 'admin'] },
         },
         {
+          path: 'uye-aktar',
+          name: 'member-import',
+          component: () => import('@/views/MemberImportView.vue'),
+          meta: { allowedRoles: ['superadmin', 'admin'] },
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
