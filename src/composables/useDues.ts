@@ -89,31 +89,41 @@ export function useDues() {
     loading.value = true
     error.value = null
     try {
-      const [membersRes, txnRes, typesRes, settingsRes] = await Promise.all([
-        supabase.from('members').select('id, full_name, status, monthly_due, dues_type_id, joined_at'),
+      const [membersRes, txnRes, discountsRes, settingsRes] = await Promise.all([
+        supabase.from('members').select('id, full_name, status, joined_at'),
         supabase
           .from('transactions')
           .select('counterparty_name, period, amount')
           .eq('kind', 'aidat'),
-        supabase.from('dues_types').select('id, amount'),
-        supabase.from('app_settings').select('dues_start').eq('id', true).maybeSingle(),
+        supabase.from('member_discounts').select('member_id, start_month, end_month'),
+        supabase
+          .from('app_settings')
+          .select('dues_start, full_price, discount_price')
+          .eq('id', true)
+          .maybeSingle(),
       ])
       if (membersRes.error) throw membersRes.error
       if (txnRes.error) throw txnRes.error
-      if (typesRes.error) throw typesRes.error
+      if (discountsRes.error) throw discountsRes.error
       if (settingsRes.error) throw settingsRes.error
 
       // Global aidat takibi başlangıcı ('YYYY-MM'); öncesi hesaba katılmaz.
       const duesStart = settingsRes.data?.dues_start ? settingsRes.data.dues_start.slice(0, 7) : null
+      // Global fiyatlar (tam / indirimli).
+      const fullPrice = settingsRes.data?.full_price != null ? Number(settingsRes.data.full_price) : 2000
+      const discountPrice = settingsRes.data?.discount_price != null ? Number(settingsRes.data.discount_price) : 500
+
+      // İndirim dönemleri: üye id -> [{ s:'YYYY-MM', e:'YYYY-MM' }] (iki uç dahil).
+      const discountsByMember = new Map<string, { s: string; e: string }[]>()
+      for (const d of discountsRes.data ?? []) {
+        const list = discountsByMember.get(d.member_id) ?? []
+        list.push({ s: d.start_month.slice(0, 7), e: d.end_month.slice(0, 7) })
+        discountsByMember.set(d.member_id, list)
+      }
 
       const members = membersRes.data ?? []
       const txns = txnRes.data ?? []
       const cur = currentPeriod()
-
-      // Aidat tipi tutarları: üyeye tip atanmışsa beklenen aidat tipin GÜNCEL tutarıdır.
-      const amountByType = new Map<string, number>(
-        (typesRes.data ?? []).map((t) => [t.id, Number(t.amount)]),
-      )
 
       // Ödemeleri name_key + dönem bazında topla.
       const paidByKey = new Map<string, Map<string, number>>()
@@ -168,11 +178,10 @@ export function useDues() {
         const joinedPeriod = (m.joined_at ?? '').slice(0, 7)
         const liable = m.status !== 'inactive'
         const byPeriod = paidByKey.get(key) ?? new Map<string, number>()
-        // Tip atanmışsa tipin tutarı; değilse üyenin özel tutarı (monthly_due).
-        const monthlyDue =
-          m.dues_type_id != null
-            ? (amountByType.get(m.dues_type_id) ?? Number(m.monthly_due))
-            : Number(m.monthly_due)
+        // Standart aylık aidat tam fiyattır; indirim dönemlerindeki aylarda
+        // beklenen tutar indirimli fiyat olur (hücre bazında hesaplanır).
+        const periods = discountsByMember.get(m.id) ?? []
+        const monthlyDue = fullPrice
 
         const cells: Record<string, DuesCell> = {}
         let totalExpected = 0
@@ -180,7 +189,8 @@ export function useDues() {
 
         for (const p of cols) {
           const inRange = liable && joinedPeriod && p >= joinedPeriod && p <= cur
-          const expected = inRange ? monthlyDue : 0
+          const discounted = periods.some((per) => per.s <= p && p <= per.e)
+          const expected = inRange ? (discounted ? discountPrice : fullPrice) : 0
           const paid = byPeriod.get(p) ?? 0
           totalExpected += expected
           totalPaid += paid

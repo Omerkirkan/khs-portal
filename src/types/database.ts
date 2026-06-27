@@ -1,4 +1,4 @@
-import type { AppRole, AppSettings, DuesType, Member, MemberStatus, Profile, Transaction, TxnKind, UserRole } from '@/types'
+import type { AppRole, AppSettings, DuesType, Member, MemberDiscount, MemberStatus, Profile, Transaction, TxnKind, UserRole } from '@/types'
 
 /**
  * Supabase şemasının TypeScript tip tanımı.
@@ -109,12 +109,34 @@ export interface Database {
         Insert: {
           id?: boolean
           dues_start?: string | null
+          full_price?: number
+          discount_price?: number
           updated_at?: string
         }
         Update: {
           id?: boolean
           dues_start?: string | null
+          full_price?: number
+          discount_price?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      member_discounts: {
+        Row: MemberDiscount
+        Insert: {
+          id?: string
+          member_id: string
+          start_month: string
+          end_month: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          start_month?: string
+          end_month?: string
+          created_at?: string
         }
         Relationships: []
       }

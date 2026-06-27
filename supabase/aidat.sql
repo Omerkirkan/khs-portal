@@ -282,6 +282,13 @@ create table if not exists public.app_settings (
   constraint app_settings_singleton check (id)
 );
 
+-- Global aidat fiyatları: standart (tam) ve indirimli tutar. Aidat tipleri
+-- (dues_types) yerine geçer — artık tüm üyeler tam fiyattan; yalnızca üyenin
+-- indirim dönemlerindeki aylarda indirimli fiyattan borçlanır.
+alter table public.app_settings
+  add column if not exists full_price     numeric(12, 2) not null default 2000,
+  add column if not exists discount_price numeric(12, 2) not null default 500;
+
 -- Tek satırı garanti et (varsa dokunma).
 insert into public.app_settings (id) values (true) on conflict (id) do nothing;
 
@@ -297,6 +304,49 @@ create policy "app_settings_update" on public.app_settings
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
 grant select, update on public.app_settings to authenticated;
+
+-- 11) Üye indirim dönemleri --------------------------------------------------
+--    Bir üye için opsiyonel, birden fazla ay aralığı tanımlanabilir. Aralık
+--    (start_month..end_month, AY bazında, iki uç dahil) içindeki aylarda üye
+--    indirimli fiyattan (app_settings.discount_price), diğer aylarda tam
+--    fiyattan (full_price) borçlandırılır. Tarihler ayın ilki olarak saklanır;
+--    karşılaştırma 'YYYY-MM' bazındadır. Örn: 2026-03..2026-05 → mart/nisan/mayıs.
+create table if not exists public.member_discounts (
+  id          uuid primary key default gen_random_uuid(),
+  member_id   uuid not null references public.members(id) on delete cascade,
+  start_month date not null,
+  end_month   date not null,
+  created_at  timestamptz not null default now(),
+  constraint member_discounts_range check (end_month >= start_month)
+);
+
+create index if not exists member_discounts_member_idx
+  on public.member_discounts (member_id);
+
+-- RLS: tüm girişli kullanıcılar okuyabilir; yalnızca admin yönetir.
+alter table public.member_discounts enable row level security;
+
+drop policy if exists "member_discounts_select" on public.member_discounts;
+create policy "member_discounts_select" on public.member_discounts
+  for select to authenticated using (true);
+
+drop policy if exists "member_discounts_insert" on public.member_discounts;
+create policy "member_discounts_insert" on public.member_discounts
+  for insert to authenticated with check (public.is_admin());
+
+drop policy if exists "member_discounts_update" on public.member_discounts;
+create policy "member_discounts_update" on public.member_discounts
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "member_discounts_delete" on public.member_discounts;
+create policy "member_discounts_delete" on public.member_discounts
+  for delete to authenticated using (public.is_admin());
+
+grant select, insert, update, delete on public.member_discounts to authenticated;
+
+-- NOT: `dues_types` tablosu ve members.dues_type_id/monthly_due sütunları artık
+-- KULLANILMIYOR (global tam/indirimli fiyat + indirim dönemleri modeline geçildi).
+-- Veriyi korumak için bırakıldılar; istenirse manuel olarak düşürülebilir.
 
 -- =============================================================================
 -- NOT: Bu betiği çalıştırdıktan sonra `src/types/database.ts` zaten members/

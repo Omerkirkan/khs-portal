@@ -1,6 +1,12 @@
 import { ref } from 'vue'
 import { supabase } from '@/lib/supabase'
-import type { AppRole, MemberRow, MemberStatus } from '@/types'
+import type { AppRole, MemberDiscount, MemberRow, MemberStatus } from '@/types'
+
+/** Üye formundan gelen indirim dönemi (aylar 'YYYY-MM' biçiminde). */
+export interface DiscountInput {
+  start_month: string
+  end_month: string
+}
 
 /** Üyenin Excel/forma açık detay alanları (banka ekstresinde yoktur). */
 export interface MemberDetailFields {
@@ -97,16 +103,26 @@ export function useMembers() {
     loading.value = true
     error.value = null
     try {
-      const [membersRes, rolesRes] = await Promise.all([
+      const [membersRes, rolesRes, discountsRes] = await Promise.all([
         supabase.from('members').select('*').order('full_name'),
         supabase.from('user_roles').select('user_id, role'),
+        supabase.from('member_discounts').select('*').order('start_month'),
       ])
       if (membersRes.error) throw membersRes.error
       if (rolesRes.error) throw rolesRes.error
+      if (discountsRes.error) throw discountsRes.error
 
       const roleByUser = new Map<string, AppRole>(
         (rolesRes.data ?? []).map((r) => [r.user_id, r.role]),
       )
+
+      // İndirim dönemlerini üyeye göre grupla.
+      const discountsByMember = new Map<string, MemberDiscount[]>()
+      for (const d of discountsRes.data ?? []) {
+        const list = discountsByMember.get(d.member_id) ?? []
+        list.push(d)
+        discountsByMember.set(d.member_id, list)
+      }
 
       members.value = (membersRes.data ?? []).map((m) => ({
         id: m.id,
@@ -119,6 +135,7 @@ export function useMembers() {
         monthly_due: m.monthly_due,
         dues_type_id: m.dues_type_id,
         joined_at: m.joined_at,
+        discounts: discountsByMember.get(m.id) ?? [],
         name_key: m.name_key,
         tc_no: m.tc_no,
         gender: m.gender,
@@ -287,6 +304,37 @@ export function useMembers() {
     }
   }
 
+  /**
+   * Bir üyenin indirim dönemlerini verilen listeyle DEĞİŞTİRİR (mevcutları siler,
+   * yenilerini ekler). Aylar 'YYYY-MM' gelir, ayın ilki (YYYY-MM-01) olarak
+   * saklanır. Geçersiz/eksik aralıklar atlanır. Başarılıysa true döner.
+   */
+  async function saveMemberDiscounts(memberId: string, periods: DiscountInput[]): Promise<boolean> {
+    try {
+      const { error: delErr } = await supabase
+        .from('member_discounts')
+        .delete()
+        .eq('member_id', memberId)
+      if (delErr) throw delErr
+
+      const rows = periods
+        .filter((p) => p.start_month && p.end_month && p.start_month <= p.end_month)
+        .map((p) => ({
+          member_id: memberId,
+          start_month: `${p.start_month}-01`,
+          end_month: `${p.end_month}-01`,
+        }))
+      if (rows.length > 0) {
+        const { error: insErr } = await supabase.from('member_discounts').insert(rows)
+        if (insErr) throw insErr
+      }
+      return true
+    } catch (err) {
+      error.value = toMessage(err, 'İndirim dönemleri kaydedilemedi.')
+      return false
+    }
+  }
+
   return {
     members,
     loading,
@@ -298,5 +346,6 @@ export function useMembers() {
     addMemberByName,
     updateMember,
     deleteMember,
+    saveMemberDiscounts,
   }
 }

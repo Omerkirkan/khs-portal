@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { UserPlus, Save, Loader2, AlertCircle, Eye, EyeOff, RefreshCw, KeyRound, IdCard } from 'lucide-vue-next'
+import { UserPlus, Save, Loader2, AlertCircle, Eye, EyeOff, RefreshCw, KeyRound, IdCard, Percent, Plus, Trash2 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import {
   ROLE_LABELS,
   MEMBER_STATUS_LABELS,
   type AppRole,
-  type DuesType,
   type MemberRow,
   type MemberStatus,
 } from '@/types'
+
+/** Üye formundaki bir indirim dönemi (aylar 'YYYY-MM'). */
+export interface DiscountPeriod {
+  start_month: string
+  end_month: string
+}
 
 /** MemberFormModal'in dışarı verdiği ham form değerleri. */
 export interface MemberFormValues {
@@ -18,9 +23,6 @@ export interface MemberFormValues {
   email: string
   phone: string
   status: MemberStatus
-  monthly_due: number
-  /** Atanan aidat tipi; null ise özel tutar (monthly_due) geçerlidir. */
-  dues_type_id: string | null
   joined_at: string
   password: string
   role: AppRole
@@ -32,6 +34,8 @@ export interface MemberFormValues {
   website: string
   member_type: string
   birth_date: string
+  /** İndirim dönemleri (aylar 'YYYY-MM'). Boş = indirim yok. */
+  discounts: DiscountPeriod[]
 }
 
 const props = defineProps<{
@@ -39,8 +43,10 @@ const props = defineProps<{
   mode: 'create' | 'edit'
   /** edit modunda düzenlenen üye; create modunda null. */
   member: MemberRow | null
-  /** Atanabilir aidat tipleri (Ayarlar → Aidatlar'da tanımlanır). */
-  duesTypes: DuesType[]
+  /** Standart (tam) aylık aidat tutarı — gösterim için. */
+  fullPrice: number
+  /** İndirimli aylık aidat tutarı — gösterim için. */
+  discountPrice: number
   submitting: boolean
   error: string | null
 }>()
@@ -56,8 +62,6 @@ const fullName = ref('')
 const email = ref('')
 const phone = ref('')
 const status = ref<MemberStatus>('active')
-/** '' = aidat tipi yok; aksi halde seçili aidat tipinin id'si. */
-const duesTypeId = ref('')
 const joinedAt = ref('')
 const password = ref('')
 const role = ref<AppRole>('member')
@@ -70,6 +74,15 @@ const education = ref('')
 const website = ref('')
 const memberType = ref('')
 const birthDate = ref('')
+/** İndirim dönemleri (aylar 'YYYY-MM'). */
+const discounts = ref<DiscountPeriod[]>([])
+
+function addDiscount(): void {
+  discounts.value.push({ start_month: '', end_month: '' })
+}
+function removeDiscount(i: number): void {
+  discounts.value.splice(i, 1)
+}
 
 /** "YYYY-MM-DD" bugün (date input varsayılanı için). */
 function today(): string {
@@ -82,10 +95,6 @@ const hasLogin = computed(() => isEdit.value && !!props.member?.user_id)
 
 const statuses: MemberStatus[] = ['active', 'inactive', 'overdue']
 
-/** Seçili aidat tipi (yoksa null = aidat tipi atanmamış). */
-const selectedType = computed<DuesType | null>(
-  () => props.duesTypes.find((t) => t.id === duesTypeId.value) ?? null,
-)
 const tl = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
   currency: 'TRY',
@@ -110,9 +119,12 @@ watch(
       email.value = props.member.email ?? ''
       phone.value = props.member.phone ?? ''
       status.value = props.member.status
-      duesTypeId.value = props.member.dues_type_id ?? ''
       joinedAt.value = props.member.joined_at?.slice(0, 10) ?? today()
       role.value = props.member.role ?? 'member'
+      discounts.value = (props.member.discounts ?? []).map((d) => ({
+        start_month: d.start_month.slice(0, 7),
+        end_month: d.end_month.slice(0, 7),
+      }))
       tcNo.value = props.member.tc_no ?? ''
       gender.value = props.member.gender ?? ''
       profession.value = props.member.profession ?? ''
@@ -125,9 +137,9 @@ watch(
       email.value = ''
       phone.value = ''
       status.value = 'active'
-      duesTypeId.value = ''
       joinedAt.value = today()
       role.value = 'member'
+      discounts.value = []
       tcNo.value = ''
       gender.value = ''
       profession.value = ''
@@ -158,9 +170,6 @@ function onSubmit(): void {
     email: email.value,
     phone: phone.value,
     status: status.value,
-    // Tutar artık aidat tipinden gelir; tip yoksa beklenen aidat 0.
-    monthly_due: selectedType.value ? selectedType.value.amount : 0,
-    dues_type_id: duesTypeId.value || null,
     joined_at: joinedAt.value,
     password: password.value,
     role: role.value,
@@ -171,6 +180,10 @@ function onSubmit(): void {
     website: website.value,
     member_type: memberType.value,
     birth_date: birthDate.value,
+    // Yalnızca iki ucu da dolu ve start <= end olan dönemler.
+    discounts: discounts.value.filter(
+      (d) => d.start_month && d.end_month && d.start_month <= d.end_month,
+    ),
   })
 }
 </script>
@@ -217,23 +230,6 @@ function onSubmit(): void {
         </label>
 
         <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-content">Aidat Tipi</span>
-          <select
-            v-model="duesTypeId"
-            class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
-          >
-            <option value="">— Aidat tipi yok —</option>
-            <option v-for="t in duesTypes" :key="t.id" :value="t.id">
-              {{ t.name }} — {{ tl.format(t.amount) }}
-            </option>
-          </select>
-          <span class="text-xs text-faint">
-            <template v-if="selectedType">Beklenen aylık aidat: {{ tl.format(selectedType.amount) }}.</template>
-            <template v-else>Tutarlar Ayarlar → Aidat Tipleri'nden gelir. Tip seçilmezse aidat beklenmez.</template>
-          </span>
-        </label>
-
-        <label class="flex flex-col gap-1.5">
           <span class="text-sm font-medium text-content">Durum</span>
           <select
             v-model="status"
@@ -242,6 +238,56 @@ function onSubmit(): void {
             <option v-for="s in statuses" :key="s" :value="s">{{ MEMBER_STATUS_LABELS[s] }}</option>
           </select>
         </label>
+      </div>
+
+      <!-- İndirim dönemleri -->
+      <div class="rounded-lg border border-line bg-base/40 p-4">
+        <div class="mb-1 flex items-center gap-2">
+          <Percent class="h-4 w-4 text-muted" />
+          <span class="text-sm font-medium text-content">İndirim Dönemleri</span>
+          <span class="text-xs text-faint">(opsiyonel)</span>
+        </div>
+        <p class="mb-3 text-xs text-faint">
+          Seçilen ay aralıklarında üye indirimli fiyattan ({{ tl.format(discountPrice) }}),
+          diğer aylarda tam fiyattan ({{ tl.format(fullPrice) }}) borçlandırılır. Birden çok aralık eklenebilir.
+        </p>
+
+        <div v-if="discounts.length > 0" class="flex flex-col gap-2">
+          <div v-for="(d, i) in discounts" :key="i" class="flex flex-wrap items-end gap-2">
+            <label class="flex flex-1 flex-col gap-1">
+              <span class="text-xs font-medium text-muted">Başlangıç ayı</span>
+              <input
+                v-model="d.start_month"
+                type="month"
+                class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
+              >
+            </label>
+            <label class="flex flex-1 flex-col gap-1">
+              <span class="text-xs font-medium text-muted">Bitiş ayı</span>
+              <input
+                v-model="d.end_month"
+                type="month"
+                class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
+              >
+            </label>
+            <button
+              type="button"
+              class="shrink-0 rounded-lg border border-line p-2 text-muted transition hover:bg-danger/10 hover:text-danger"
+              title="Bu dönemi kaldır"
+              @click="removeDiscount(i)"
+            >
+              <Trash2 class="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="mt-3 flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-zinc-500/10 hover:text-content"
+          @click="addDiscount"
+        >
+          <Plus class="h-4 w-4" /> İndirim dönemi ekle
+        </button>
       </div>
 
       <!-- Kişisel/üyelik detayları (Kurum Üyelik Listesi içe aktarmasından doldurulabilir) -->

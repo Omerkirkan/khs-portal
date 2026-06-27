@@ -9,6 +9,10 @@ import { supabase } from '@/lib/supabase'
 export function useAppSettings() {
   /** Aidat takibi başlangıcı, 'YYYY-MM-DD' (ayın ilki) ya da null. */
   const duesStart = ref<string | null>(null)
+  /** Standart (tam) aylık aidat tutarı. */
+  const fullPrice = ref(2000)
+  /** İndirimli aylık aidat tutarı. */
+  const discountPrice = ref(500)
   const loading = ref(false)
   const submitting = ref(false)
   const error = ref<string | null>(null)
@@ -28,15 +32,38 @@ export function useAppSettings() {
     try {
       const { data, error: selErr } = await supabase
         .from('app_settings')
-        .select('dues_start')
+        .select('dues_start, full_price, discount_price')
         .eq('id', true)
         .maybeSingle()
       if (selErr) throw selErr
       duesStart.value = data?.dues_start ?? null
+      if (data?.full_price != null) fullPrice.value = Number(data.full_price)
+      if (data?.discount_price != null) discountPrice.value = Number(data.discount_price)
     } catch (err) {
       error.value = toMessage(err, 'Ayarlar yüklenemedi.')
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Tam ve indirimli aidat fiyatlarını günceller. Başarılıysa true döner. */
+  async function updatePrices(full: number, discount: number): Promise<boolean> {
+    submitting.value = true
+    error.value = null
+    try {
+      const { error: updErr } = await supabase
+        .from('app_settings')
+        .update({ full_price: full, discount_price: discount, updated_at: new Date().toISOString() })
+        .eq('id', true)
+      if (updErr) throw updErr
+      fullPrice.value = full
+      discountPrice.value = discount
+      return true
+    } catch (err) {
+      error.value = toMessage(err, 'Fiyatlar kaydedilemedi.')
+      return false
+    } finally {
+      submitting.value = false
     }
   }
 
@@ -63,5 +90,15 @@ export function useAppSettings() {
     }
   }
 
-  return { duesStart, loading, submitting, error, loadSettings, updateDuesStart }
+  return {
+    duesStart,
+    fullPrice,
+    discountPrice,
+    loading,
+    submitting,
+    error,
+    loadSettings,
+    updateDuesStart,
+    updatePrices,
+  }
 }

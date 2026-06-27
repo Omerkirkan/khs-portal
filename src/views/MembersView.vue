@@ -13,7 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useMembers } from '@/composables/useMembers'
-import { useDuesTypes } from '@/composables/useDuesTypes'
+import { useAppSettings } from '@/composables/useAppSettings'
 import MemberFormModal, { type MemberFormValues } from '@/components/domain/MemberFormModal.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import {
@@ -35,8 +35,9 @@ const {
   createMember,
   updateMember,
   deleteMember,
+  saveMemberDiscounts,
 } = useMembers()
-const { types: duesTypes, listTypes } = useDuesTypes()
+const { fullPrice, discountPrice, loadSettings } = useAppSettings()
 
 const roleBadgeClass: Record<AppRole, string> = {
   superadmin: 'bg-accent/10 text-accent ring-accent/20',
@@ -62,11 +63,13 @@ const tl = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 0,
 })
 
-/** Üyenin beklenen aylık aidatı: tip atanmışsa tipin adı+tutarı, yoksa tip yok. */
+/** Üyenin standart aylık aidatı (tam fiyat) + indirim dönemi göstergesi. */
 function memberDue(m: MemberRow): { label: string; amount: string } {
-  const type = m.dues_type_id ? duesTypes.value.find((t) => t.id === m.dues_type_id) : null
-  if (type) return { label: type.name, amount: tl.format(type.amount) }
-  return { label: 'Aidat tipi yok', amount: '—' }
+  const hasDiscount = (m.discounts?.length ?? 0) > 0
+  return {
+    label: hasDiscount ? 'İndirimli dönem var' : 'Standart',
+    amount: tl.format(fullPrice.value),
+  }
 }
 
 // --- Arama / filtre -------------------------------------------------------
@@ -118,8 +121,6 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
       email: values.email,
       phone: values.phone,
       status: values.status,
-      monthly_due: values.monthly_due,
-      dues_type_id: values.dues_type_id,
       joined_at: values.joined_at,
       password: values.password,
       role: values.role,
@@ -131,7 +132,11 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
       member_type: values.member_type,
       birth_date: values.birth_date,
     })
-    if (id) formOpen.value = false
+    if (id) {
+      await saveMemberDiscounts(id, values.discounts)
+      await listMembers()
+      formOpen.value = false
+    }
   } else if (editing.value) {
     const ok = await updateMember(
       {
@@ -140,8 +145,6 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
         email: values.email,
         phone: values.phone,
         status: values.status,
-        monthly_due: values.monthly_due,
-        dues_type_id: values.dues_type_id,
         joined_at: values.joined_at,
         role: values.role,
         password: values.password,
@@ -155,7 +158,11 @@ async function handleSubmit(values: MemberFormValues): Promise<void> {
       },
       editing.value.user_id,
     )
-    if (ok) formOpen.value = false
+    if (ok) {
+      await saveMemberDiscounts(editing.value.id, values.discounts)
+      await listMembers()
+      formOpen.value = false
+    }
   }
 }
 
@@ -176,7 +183,7 @@ async function confirmDelete(): Promise<void> {
 
 onMounted(() => {
   listMembers()
-  listTypes()
+  loadSettings()
 })
 </script>
 
@@ -343,7 +350,8 @@ onMounted(() => {
       :open="formOpen"
       :mode="formMode"
       :member="editing"
-      :dues-types="duesTypes"
+      :full-price="fullPrice"
+      :discount-price="discountPrice"
       :submitting="submitting"
       :error="error"
       @submit="handleSubmit"

@@ -65,7 +65,26 @@ export type AppSettings = {
   id: boolean
   /** Global aidat takibi başlangıcı (YYYY-MM-DD). Null = en erken aktiviteden. */
   dues_start: string | null
+  /** Standart (tam) aylık aidat tutarı (TL). */
+  full_price: number
+  /** İndirimli aylık aidat tutarı (TL) — üyenin indirim dönemlerindeki aylarda. */
+  discount_price: number
   updated_at: string
+}
+
+/**
+ * public.member_discounts satırı — bir üyenin indirimli borçlandırılacağı ay
+ * aralığı (iki uç dahil, AY bazında). Tarihler ayın ilki olarak saklanır.
+ * Not: Supabase `Database` jeneriği gereği `interface` değil `type`.
+ */
+export type MemberDiscount = {
+  id: string
+  member_id: string
+  /** Başlangıç ayı (YYYY-MM-DD, ayın ilki). */
+  start_month: string
+  /** Bitiş ayı (YYYY-MM-DD, ayın ilki) — bu ay dahil indirimli. */
+  end_month: string
+  created_at: string
 }
 
 /** public.txn_kind enum'u ile birebir. */
@@ -113,6 +132,8 @@ export interface MemberRow {
   dues_type_id: string | null
   /** Üyelik başlangıcı (YYYY-MM-DD) — borç bu aydan itibaren hesaplanır. */
   joined_at: string
+  /** Bu üyenin indirim dönemleri (varsa). Boş dizi = indirim yok. */
+  discounts: MemberDiscount[]
   /** Türkçe-duyarlı eşleştirme anahtarı (içe aktarmada üye eşleşmesi için). */
   name_key: string
   /** T.C. Kimlik No (Kurum Üyelik Listesi içe aktarmasından). */
