@@ -49,9 +49,9 @@ const stats = computed(() => {
   }
 })
 
-/** Bu satır için "Ekle" butonu gösterilsin mi? */
+/** Bu satır için "Ekle" butonu gösterilsin mi? (Yalnızca aidat; bağış/diğer için gösterilmez.) */
 function showAdd(row: ImportRow): boolean {
-  return !row.memberId && row.kind !== 'diger' && !!row.counterpartyName
+  return !row.memberId && row.kind === 'aidat' && !!row.counterpartyName
 }
 
 // --- Dosya seçimi ---------------------------------------------------------
