@@ -14,6 +14,8 @@ import {
   X,
   Sun,
   Moon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useThemeStore } from '@/stores/useThemeStore'
@@ -23,6 +25,16 @@ const auth = useAuthStore()
 const theme = useThemeStore()
 const router = useRouter()
 const mobileOpen = ref(false)
+
+/**
+ * Masaüstünde sidebar daraltılmış mı (yalnızca ikonlar)? localStorage'da saklanır.
+ * Mobilde etkisizdir (orada sidebar tam genişlikte slide-over olarak açılır).
+ */
+const collapsed = ref(localStorage.getItem('sidebar-collapsed') === '1')
+function toggleCollapsed(): void {
+  collapsed.value = !collapsed.value
+  localStorage.setItem('sidebar-collapsed', collapsed.value ? '1' : '0')
+}
 
 interface NavItem {
   name: string
@@ -85,24 +97,40 @@ async function handleLogout(): Promise<void> {
 
     <!-- Sidebar -->
     <aside
-      class="fixed inset-y-0 left-0 z-30 flex w-64 transform flex-col border-r border-line bg-sidebar transition-transform duration-200 ease-out lg:static lg:translate-x-0"
-      :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed inset-y-0 left-0 z-30 flex w-64 transform flex-col border-r border-line bg-sidebar transition-[transform,width] duration-200 ease-out lg:static lg:translate-x-0"
+      :class="[mobileOpen ? 'translate-x-0' : '-translate-x-full', collapsed ? 'lg:w-[4.5rem]' : 'lg:w-64']"
     >
-      <div class="flex h-16 items-center gap-3 border-b border-line px-5">
-        <img
-          src="/logo-white.png"
-          alt="Konya Hackerspace"
-          class="h-9 w-9 shrink-0 invert dark:invert-0"
+      <div
+        class="flex h-16 shrink-0 items-center gap-3 border-b border-line px-5"
+        :class="collapsed && 'lg:justify-center lg:px-2'"
+      >
+        <div class="flex min-w-0 items-center gap-3" :class="collapsed && 'lg:hidden'">
+          <img
+            src="/logo-white.png"
+            alt="Konya Hackerspace"
+            class="h-9 w-9 shrink-0 invert dark:invert-0"
+          >
+          <span class="flex flex-col leading-tight">
+            <span class="text-sm font-semibold tracking-tight">KHS Portal</span>
+            <span class="text-xs text-faint">Hackerspace Yönetimi</span>
+          </span>
+        </div>
+        <button
+          class="ml-auto hidden shrink-0 rounded-lg border border-line p-1.5 text-muted transition hover:bg-zinc-500/10 hover:text-content lg:flex"
+          :class="collapsed && 'lg:ml-0'"
+          :title="collapsed ? 'Menüyü genişlet' : 'Menüyü daralt'"
+          @click="toggleCollapsed"
         >
-        <span class="flex flex-col leading-tight">
-          <span class="text-sm font-semibold tracking-tight">KHS Portal</span>
-          <span class="text-xs text-faint">Hackerspace Yönetimi</span>
-        </span>
+          <component :is="collapsed ? ChevronRight : ChevronLeft" class="h-5 w-5" />
+        </button>
       </div>
 
       <nav class="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
         <div v-for="group in navSections" :key="group.title" class="flex flex-col gap-1">
-          <p class="px-3 pb-1 text-xs font-medium uppercase tracking-wider text-faint">
+          <p
+            class="px-3 pb-1 text-xs font-medium uppercase tracking-wider text-faint"
+            :class="collapsed && 'lg:hidden'"
+          >
             {{ group.title }}
           </p>
           <RouterLink
@@ -110,24 +138,30 @@ async function handleLogout(): Promise<void> {
             :key="item.name"
             :to="{ name: item.name }"
             class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-zinc-500/10 hover:text-content"
+            :class="collapsed && 'lg:justify-center lg:px-0'"
             active-class="!bg-accent !text-accent-fg shadow-card"
+            :title="collapsed ? item.label : undefined"
             @click="mobileOpen = false"
           >
-            <component :is="item.icon" class="h-[18px] w-[18px]" />
-            {{ item.label }}
+            <component :is="item.icon" class="h-[18px] w-[18px] shrink-0" />
+            <span :class="collapsed && 'lg:hidden'">{{ item.label }}</span>
           </RouterLink>
         </div>
       </nav>
 
       <!-- Sidebar alt: kullanıcı kimliği -->
       <div class="border-t border-line p-3">
-        <div class="flex items-center gap-3 rounded-lg px-2 py-2">
+        <div
+          class="flex items-center gap-3 rounded-lg px-2 py-2"
+          :class="collapsed && 'lg:flex-col lg:gap-2 lg:px-0'"
+        >
           <div
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent"
+            :title="collapsed ? `${auth.displayName} · ${roleLabel}` : undefined"
           >
             {{ userInitial }}
           </div>
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1" :class="collapsed && 'lg:hidden'">
             <p class="truncate text-sm font-medium text-content">{{ auth.displayName }}</p>
             <p class="truncate text-xs text-faint">{{ roleLabel }}</p>
           </div>
