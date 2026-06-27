@@ -56,8 +56,7 @@ const fullName = ref('')
 const email = ref('')
 const phone = ref('')
 const status = ref<MemberStatus>('active')
-const monthlyDue = ref(2000)
-/** '' = özel tutar; aksi halde seçili aidat tipinin id'si. */
+/** '' = aidat tipi yok; aksi halde seçili aidat tipinin id'si. */
 const duesTypeId = ref('')
 const joinedAt = ref('')
 const password = ref('')
@@ -83,13 +82,9 @@ const hasLogin = computed(() => isEdit.value && !!props.member?.user_id)
 
 const statuses: MemberStatus[] = ['active', 'inactive', 'overdue']
 
-/** Seçili aidat tipi (yoksa null = özel tutar). */
+/** Seçili aidat tipi (yoksa null = aidat tipi atanmamış). */
 const selectedType = computed<DuesType | null>(
   () => props.duesTypes.find((t) => t.id === duesTypeId.value) ?? null,
-)
-/** Tabloda/önizlemede gösterilecek beklenen aylık aidat. */
-const effectiveDue = computed(() =>
-  selectedType.value ? selectedType.value.amount : Number(monthlyDue.value) || 0,
 )
 const tl = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
@@ -115,7 +110,6 @@ watch(
       email.value = props.member.email ?? ''
       phone.value = props.member.phone ?? ''
       status.value = props.member.status
-      monthlyDue.value = props.member.monthly_due
       duesTypeId.value = props.member.dues_type_id ?? ''
       joinedAt.value = props.member.joined_at?.slice(0, 10) ?? today()
       role.value = props.member.role ?? 'member'
@@ -131,7 +125,6 @@ watch(
       email.value = ''
       phone.value = ''
       status.value = 'active'
-      monthlyDue.value = 2000
       duesTypeId.value = ''
       joinedAt.value = today()
       role.value = 'member'
@@ -165,7 +158,8 @@ function onSubmit(): void {
     email: email.value,
     phone: phone.value,
     status: status.value,
-    monthly_due: Number(monthlyDue.value) || 0,
+    // Tutar artık aidat tipinden gelir; tip yoksa beklenen aidat 0.
+    monthly_due: selectedType.value ? selectedType.value.amount : 0,
     dues_type_id: duesTypeId.value || null,
     joined_at: joinedAt.value,
     password: password.value,
@@ -228,35 +222,15 @@ function onSubmit(): void {
             v-model="duesTypeId"
             class="rounded-lg border border-line bg-input px-3 py-2 text-sm text-content focus:border-accent"
           >
-            <option value="">Özel tutar</option>
+            <option value="">— Aidat tipi yok —</option>
             <option v-for="t in duesTypes" :key="t.id" :value="t.id">
               {{ t.name }} — {{ tl.format(t.amount) }}
             </option>
           </select>
           <span class="text-xs text-faint">
-            Tip seçilirse beklenen aidat tipin güncel tutarıdır.
+            <template v-if="selectedType">Beklenen aylık aidat: {{ tl.format(selectedType.amount) }}.</template>
+            <template v-else>Tutarlar Ayarlar → Aidat Tipleri'nden gelir. Tip seçilmezse aidat beklenmez.</template>
           </span>
-        </label>
-
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium text-content">Aylık Aidat (₺)</span>
-          <input
-            v-if="!selectedType"
-            v-model.number="monthlyDue"
-            type="number"
-            min="0"
-            step="50"
-            placeholder="2000"
-            class="rounded-lg border border-line bg-input px-3 py-2 font-mono text-sm text-content placeholder:font-sans placeholder:text-faint focus:border-accent"
-          >
-          <input
-            v-else
-            :value="tl.format(effectiveDue)"
-            type="text"
-            readonly
-            class="cursor-not-allowed rounded-lg border border-line bg-base/40 px-3 py-2 font-mono text-sm text-muted"
-          >
-          <span v-if="selectedType" class="text-xs text-faint">“{{ selectedType.name }}” tipinden geliyor.</span>
         </label>
 
         <label class="flex flex-col gap-1.5">

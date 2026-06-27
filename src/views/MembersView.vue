@@ -60,11 +60,11 @@ const tl = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 0,
 })
 
-/** Üyenin beklenen aylık aidatı: tip atanmışsa tipin adı+tutarı, yoksa özel tutar. */
+/** Üyenin beklenen aylık aidatı: tip atanmışsa tipin adı+tutarı, yoksa tip yok. */
 function memberDue(m: MemberRow): { label: string; amount: string } {
   const type = m.dues_type_id ? duesTypes.value.find((t) => t.id === m.dues_type_id) : null
   if (type) return { label: type.name, amount: tl.format(type.amount) }
-  return { label: 'Özel', amount: tl.format(m.monthly_due) }
+  return { label: 'Aidat tipi yok', amount: '—' }
 }
 
 // --- Arama / filtre -------------------------------------------------------
