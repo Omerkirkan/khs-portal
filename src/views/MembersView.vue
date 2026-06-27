@@ -63,13 +63,21 @@ const tl = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 0,
 })
 
-/** Üyenin standart aylık aidatı (tam fiyat) + indirim dönemi göstergesi. */
+/** "YYYY-MM" — bu ay. */
+function currentPeriod(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Üyenin bu ay beklenen aidatı: indirim dönemindeyse indirimli, değilse tam fiyat. */
 function memberDue(m: MemberRow): { label: string; amount: string } {
-  const hasDiscount = (m.discounts?.length ?? 0) > 0
-  return {
-    label: hasDiscount ? 'İndirimli dönem var' : 'Standart',
-    amount: tl.format(fullPrice.value),
-  }
+  const cur = currentPeriod()
+  const discounted = (m.discounts ?? []).some(
+    (d) => d.start_month.slice(0, 7) <= cur && cur <= d.end_month.slice(0, 7),
+  )
+  return discounted
+    ? { label: 'İndirimli', amount: tl.format(discountPrice.value) }
+    : { label: 'Standart', amount: tl.format(fullPrice.value) }
 }
 
 // --- Arama / filtre -------------------------------------------------------
